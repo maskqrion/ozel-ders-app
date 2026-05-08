@@ -1,0 +1,97 @@
+.lessons-calendar .react-calendar {
+  width: 100%;
+  border: none;
+  font-family: inherit;
+  background: transparent;
+  line-height: 1.4;
+}
+.lessons-calendar .react-calendar button {
+  border-radius: 6px;
+}
+.lessons-calendar .react-calendar__navigation {
+  margin-bottom: 8px;
+  height: 36px;
+}
+.lessons-calendar .react-calendar__navigation button {
+  font-weight: 600;
+  font-size: 14px;
+  color: rgb(15 23 42);
+  min-width: 32px;
+}
+.lessons-calendar .react-calendar__navigation button:enabled:hover,
+.lessons-calendar .react-calendar__navigation button:enabled:focus {
+  background: rgb(241 245 249);
+}
+.lessons-calendar .react-calendar__navigation button:disabled {
+  background: transparent;
+  color: rgb(148 163 184);
+}
+.lessons-calendar .react-calendar__month-view__weekdays {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+  letter-spacing: 0.04em;
+}
+.lessons-calendar .react-calendar__month-view__weekdays abbr {
+  text-decoration: none;
+  cursor: default;
+}
+.lessons-calendar .react-calendar__tile {
+  padding: 8px 4px;
+  font-size: 13px;
+  color: rgb(30 41 59);
+  position: relative;
+}
+.lessons-calendar .react-calendar__tile:enabled:hover,
+.lessons-calendar .react-calendar__tile:enabled:focus {
+  background: rgb(241 245 249);
+}
+.lessons-calendar .react-calendar__tile--now {
+  background: rgb(254 249 195);
+  color: rgb(120 53 15);
+}
+.lessons-calendar .react-calendar__tile--now:enabled:hover,
+.lessons-calendar .react-calendar__tile--now:enabled:focus {
+  background: rgb(253 230 138);
+}
+.lessons-calendar .react-calendar__tile--active,
+.lessons-calendar .react-calendar__tile--active:enabled:hover,
+.lessons-calendar .react-calendar__tile--active:enabled:focus {
+  background: var(--lc-accent, rgb(37 99 235));
+  color: white;
+}
+.lessons-calendar .react-calendar__month-view__days__day--neighboringMonth {
+  color: rgb(148 163 184);
+}
+.lessons-calendar .react-calendar__month-view__days__day--weekend:not(.react-calendar__tile--active) {
+  color: rgb(220 38 38);
+}
+.lessons-calendar .lc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 3px;
+  height: 5px;
+}
+.lessons-calendar .lc-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+.lessons-calendar .lc-dot-bekliyor {
+  background: rgb(234 179 8);
+}
+.lessons-calendar .lc-dot-tamamlandi {
+  background: rgb(34 197 94);
+}
+.lessons-calendar .react-calendar__tile--active .lc-dot {
+  background: white;
+}
+.lessons-calendar.accent-blue {
+  --lc-accent: rgb(37 99 235);
+}
+.lessons-calendar.accent-green {
+  --lc-accent: rgb(22 163 74);
+}
