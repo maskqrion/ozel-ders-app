@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { User as AuthUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import type { User } from "@/lib/types";
 
-type Role = "hoca" | "ogrenci";
-type Profile = { email: string; role: Role; full_name: string | null };
+type Profile = Pick<User, "email" | "role" | "full_name">;
 type Msg = { type: "success" | "error"; text: string } | null;
 
 export default function ProfilPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [fullName, setFullName] = useState("");
 

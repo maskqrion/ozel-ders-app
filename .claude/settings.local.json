@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree *)",
+      "Bash(git worktree *)",
+      "Bash(git *)",
+      "PowerShell(Test-Path *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npx eslint *)",
+      "Bash(echo \"tsc=$?\")",
+      "Bash(echo \"---tsc=$?---\")"
+    ]
+  }
+}

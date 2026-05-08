@@ -8,12 +8,17 @@ import LessonsCalendar from "@/components/LessonsCalendar";
 import { attachSignedUrls } from "@/lib/storage";
 import toast from "react-hot-toast";
 
+// Tipleri içe aktarıyoruz
+import { Lesson, Assignment, Resource } from "@/lib/types";
+
 export default function OgrenciPaneli() {
   const [user, setUser] = useState<any>(null);
-  const [dersler, setDersler] = useState<any[]>([]);
-  const [odevler, setOdevler] = useState<any[]>([]);
-  const [kaynaklar, setKaynaklar] = useState<any[]>([]); // Yeni eklenen state
-  const [siradakiDers, setSiradakiDers] = useState<any>(null);
+  
+  // any yerine kendi oluşturduğumuz tipleri kullanıyoruz
+  const [dersler, setDersler] = useState<Lesson[]>([]);
+  const [odevler, setOdevler] = useState<Assignment[]>([]);
+  const [kaynaklar, setKaynaklar] = useState<Resource[]>([]); 
+  const [siradakiDers, setSiradakiDers] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [submissionText, setSubmissionText] = useState<Record<string, string>>({});
@@ -38,43 +43,49 @@ export default function OgrenciPaneli() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) return router.push("/login");
-      setUser(currentUser);
-      
-      // Dersleri, Ödevleri ve Kaynakları aynı anda çekiyoruz
-      await Promise.all([
-        fetchDersler(currentUser.id),
-        fetchOdevler(currentUser.id),
-        fetchKaynaklar()
-      ]);
-      setLoading(false);
+      try {
+        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        if (error || !currentUser) {
+          await supabase.auth.signOut();
+          return router.push("/login");
+        }
+        setUser(currentUser);
+        
+        await Promise.all([
+          fetchDersler(currentUser.id),
+          fetchOdevler(currentUser.id),
+          fetchKaynaklar()
+        ]);
+        setLoading(false);
+      } catch (err) {
+        console.error("Beklenmedik hata:", err);
+        router.push("/login");
+      }
     };
     fetchData();
   }, [router]);
 
   const fetchDersler = async (ogrenciId: string) => {
-    const { data } = await supabase.from("lessons").select(`id, lesson_date, status, users!lessons_hoca_id_fkey (email)`).eq("ogrenci_id", ogrenciId).order("lesson_date", { ascending: true });
+    const { data } = await supabase.from("lessons").select(`id, lesson_date, status, ogrenci_id, users!lessons_hoca_id_fkey (email)`).eq("ogrenci_id", ogrenciId).order("lesson_date", { ascending: true });
     if (data) {
-      setDersler(data);
-      setSiradakiDers(data.find(d => d.status === 'bekliyor'));
+      setDersler(data as Lesson[]);
+      setSiradakiDers((data as Lesson[]).find(d => d.status === 'bekliyor') || null);
     }
   };
 
   const fetchOdevler = async (ogrenciId: string) => {
-    const { data } = await supabase.from("assignments").select(`id, title, description, status, submission_text, submission_file_path, submitted_at, lessons!inner(ogrenci_id, lesson_date, users!lessons_hoca_id_fkey(email))`).eq("lessons.ogrenci_id", ogrenciId).order("created_at", { ascending: false });
+    const { data } = await supabase.from("assignments").select(`id, title, description, status, submission_text, submission_file_path, submitted_at, rejection_reason, lessons!inner(ogrenci_id, lesson_date, users!lessons_hoca_id_fkey(email))`).eq("lessons.ogrenci_id", ogrenciId).order("created_at", { ascending: false });
     if (data) {
       const enriched = await attachSignedUrls(data, "submission_file_path", "submission_signed_url");
-      setOdevler(enriched);
+      setOdevler(enriched as Assignment[]);
     }
   };
 
-  // Yeni eklenen fonksiyon: Kaynakları veritabanından okur
   const fetchKaynaklar = async () => {
     const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
     if (data) {
       const enriched = await attachSignedUrls(data, "file_path", "signed_url");
-      setKaynaklar(enriched);
+      setKaynaklar(enriched as Resource[]);
     }
   };
 
@@ -109,6 +120,7 @@ export default function OgrenciPaneli() {
         submission_file_path: filePath,
         submitted_at: new Date().toISOString(),
         status: 'yapildi',
+        rejection_reason: null
       }).eq('id', assignmentId);
 
       if (error) throw error;
@@ -125,7 +137,7 @@ export default function OgrenciPaneli() {
       });
 
       await fetchOdevler(user.id);
-      toast.success("Teslim alındı.");
+      toast.success("Ödeviniz başarıyla teslim edildi.");
     } catch (err: any) {
       toast.error("Hata: " + err.message);
     } finally {
@@ -148,7 +160,6 @@ export default function OgrenciPaneli() {
 
       <main className="p-6 max-w-6xl mx-auto mt-6 space-y-8">
         
-        {/* Üst İstatistikler */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-green-500">
             <h3 className="text-gray-500 text-sm font-medium uppercase">Sıradaki Dersim</h3>
@@ -162,12 +173,11 @@ export default function OgrenciPaneli() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
             <h3 className="text-gray-500 text-sm font-medium uppercase">Bekleyen Ödevler</h3>
-            <p className="text-3xl font-bold text-gray-800 mt-2">{odevler.filter(o => o.status === 'verildi').length}</p>
+            <p className="text-3xl font-bold text-gray-800 mt-2">{odevler.filter(o => o.status === 'verildi' || o.status === 'reddedildi').length}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sol Kolon: Ödevler ve Kaynaklar */}
           <div className="lg:col-span-2 space-y-8">
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Ödevlerim</h2>
@@ -177,19 +187,36 @@ export default function OgrenciPaneli() {
                 ) : (
                   odevler.map(o => {
                     const isCompleted = o.status === 'yapildi';
+                    const isRejected = o.status === 'reddedildi'; 
+
                     return (
-                      <div key={o.id} className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
+                      <div key={o.id} className={`bg-white p-5 rounded-lg shadow-sm border ${isRejected ? 'border-red-300' : 'border-gray-100'}`}>
                         <div className="flex justify-between items-start gap-3">
                           <div className="min-w-0">
                             <h4 className="font-bold text-gray-900">{o.title}</h4>
                             {o.description && <p className="text-gray-600 text-sm mt-1">{o.description}</p>}
                           </div>
+                          
                           <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                            isCompleted ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                            isCompleted ? "bg-green-100 text-green-700" : 
+                            isRejected ? "bg-red-100 text-red-700" : 
+                            "bg-yellow-100 text-yellow-700"
                           }`}>
-                            {isCompleted ? "Teslim Edildi" : "Bekliyor"}
+                            {isCompleted ? "Teslim Edildi" : isRejected ? "Reddedildi" : "Bekliyor"}
                           </span>
                         </div>
+
+                        {isRejected && (
+                          <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
+                            <p className="text-sm font-semibold text-red-800">Hocanız ödevinizi kabul etmedi!</p>
+                            {o.rejection_reason && (
+                              <p className="text-sm text-red-700 mt-1">
+                                <span className="font-semibold">Sebep:</span> {o.rejection_reason}
+                              </p>
+                            )}
+                            <p className="text-xs text-red-600 mt-2">Lütfen eksiklerinizi giderip aşağıdan tekrar teslim ediniz.</p>
+                          </div>
+                        )}
 
                         {isCompleted ? (
                           <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
@@ -235,7 +262,7 @@ export default function OgrenciPaneli() {
                                 disabled={submitting === o.id}
                                 className="rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
                               >
-                                {submitting === o.id ? "Gönderiliyor..." : "Teslim Et"}
+                                {submitting === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
                               </button>
                             </div>
                           </div>
@@ -247,7 +274,6 @@ export default function OgrenciPaneli() {
               </div>
             </div>
 
-            {/* YENİ EKLENEN KISIM: KAYNAKLAR */}
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Ders Materyalleri ve Kaynaklar</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -265,7 +291,6 @@ export default function OgrenciPaneli() {
             </div>
           </div>
 
-          {/* Sağ Kolon: Ders Takvimi */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-800 mb-2">Ders Takvimi</h2>
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">

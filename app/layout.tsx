@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
@@ -13,10 +13,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// PWA ve genel ayarlar burada birleştirildi
 export const metadata: Metadata = {
   title: "Özel Ders Pro",
-  description:
-    "Hoca ve öğrenciler için tek panelden ders, ödev ve kaynak yönetim platformu.",
+  description: "Özel Ders Takip ve Ödev Sistemi",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Özel Ders Pro",
+  },
+};
+
+// Viewport tanımı sadece bir kez burada yapılmalı
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
