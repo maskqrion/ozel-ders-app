@@ -9,7 +9,19 @@
       "Bash(echo \"exit=$?\")",
       "Bash(npx eslint *)",
       "Bash(echo \"tsc=$?\")",
-      "Bash(echo \"---tsc=$?---\")"
+      "Bash(echo \"---tsc=$?---\")",
+      "Bash(npm run *)",
+      "Bash(npx cap *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(java *)",
+      "PowerShell(Get-ChildItem *)",
+      "Bash(npm install *)",
+      "Bash(node *)",
+      "Bash(dir C:\\\\ozel-ders-app\\\\supabase\\\\migrations\\\\ *)",
+      "Bash(npx next *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"BASELINE_EXIT=$?\")",
+      "Bash(git stash *)"
     ]
   }
 }

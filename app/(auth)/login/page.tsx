@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -83,14 +84,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="font-sans min-h-screen flex bg-slate-50 text-slate-900">
-      {/* SOL: Marka paneli (sadece desktop) */}
-      <aside className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-emerald-500 p-12 flex-col justify-between text-white">
+    // bg-slate-50 kaldırıldı, layout'taki gradient arka planın görünmesi sağlandı
+    <div className="font-sans min-h-screen flex text-slate-900">
+      {/* SOL: Marka paneli (sadece desktop) - Fade In Animasyonu Eklendi */}
+      <aside className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-emerald-500 p-12 flex-col justify-between text-white animate-fadeIn">
         <div className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl animate-pulse" />
 
-        <div className="relative flex items-center gap-2.5">
-          <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center font-black text-lg ring-1 ring-white/20">
+        <div className="relative flex items-center gap-2.5 animate-popIn">
+          <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center font-black text-lg ring-1 ring-white/20 shadow-lg">
             Ö
           </div>
           <span className="text-lg font-semibold tracking-tight">Özel Ders Pro</span>
@@ -124,34 +126,35 @@ export default function LoginPage() {
         </p>
       </aside>
 
-      {/* SAĞ: Form */}
-      <main className="flex-1 flex items-center justify-center p-6 sm:p-10">
+      {/* SAĞ: Form - Slide Up Animasyonu Eklendi */}
+      <main className="flex-1 flex items-center justify-center p-6 sm:p-10 animate-slideUp">
         <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white font-black">
+          <div className="lg:hidden flex items-center gap-2.5 mb-8 animate-popIn">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white font-black shadow-md">
               Ö
             </div>
-            <span className="text-lg font-semibold tracking-tight">Özel Ders Pro</span>
+            <span className="text-lg font-semibold tracking-tight text-slate-800">Özel Ders Pro</span>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/60 ring-1 ring-slate-100 p-7 sm:p-9">
-            <h2 className="text-2xl font-bold tracking-tight">
+          {/* Form Kartına Buzlu Cam (Glassmorphism) ve Premium Gölge Eklendi */}
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-blue-900/5 ring-1 ring-white/50 p-7 sm:p-10">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               {isLogin ? "Tekrar hoş geldin" : "Hesabını oluştur"}
             </h2>
-            <p className="text-sm text-slate-500 mt-1.5">
+            <p className="text-sm text-slate-500 mt-2">
               {isLogin
                 ? "E-posta ve şifrenle giriş yap."
                 : "Birkaç bilgiyle hesabını oluştur, hemen başla."}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg text-sm font-medium">
+            <div className="mt-6 grid grid-cols-2 gap-1 p-1 bg-slate-100/80 rounded-xl text-sm font-medium">
               <button
                 type="button"
                 onClick={() => switchMode(true)}
-                className={`py-2 rounded-md transition-all ${
+                className={`py-2.5 rounded-lg transition-all duration-300 ${
                   isLogin
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                 }`}
               >
                 Giriş Yap
@@ -159,21 +162,21 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode(false)}
-                className={`py-2 rounded-md transition-all ${
+                className={`py-2.5 rounded-lg transition-all duration-300 ${
                   !isLogin
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
                 }`}
               >
                 Kayıt Ol
               </button>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handleAuth}>
+            <form className="mt-8 space-y-5" onSubmit={handleAuth}>
               {error && (
                 <div
                   role="alert"
-                  className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700"
+                  className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 animate-fadeIn"
                 >
                   {error}
                 </div>
@@ -181,14 +184,14 @@ export default function LoginPage() {
               {success && (
                 <div
                   role="status"
-                  className="rounded-lg border border-emerald-100 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-700"
+                  className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 animate-fadeIn"
                 >
                   {success}
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
                   E-posta
                 </label>
                 <input
@@ -199,14 +202,24 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ornek@eposta.com"
-                  className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
+                  className="mt-2 block w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all duration-300 hover:bg-white focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                  Şifre
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-sm font-semibold text-slate-700">
+                    Şifre
+                  </label>
+                  {isLogin && (
+                    <Link
+                      href="/sifremi-unuttum"
+                      className="text-xs font-bold text-blue-600 transition-colors hover:text-blue-800"
+                    >
+                      Şifremi Unuttum
+                    </Link>
+                  )}
+                </div>
                 <input
                   id="password"
                   type="password"
@@ -215,21 +228,21 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
+                  className="mt-2 block w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all duration-300 hover:bg-white focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                 />
               </div>
 
               {!isLogin && (
-                <div>
-                  <span className="block text-sm font-medium text-slate-700 mb-1.5">
+                <div className="animate-fadeIn">
+                  <span className="block text-sm font-semibold text-slate-700 mb-2">
                     Hesap Türü
                   </span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <label
-                      className={`cursor-pointer rounded-lg border px-3 py-2.5 text-sm font-medium text-center transition ${
+                      className={`cursor-pointer rounded-xl border px-4 py-3 text-sm font-bold text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                         role === "ogrenci"
-                          ? "border-green-500 bg-green-50 text-green-700 ring-2 ring-green-500/15"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          ? "border-green-500 bg-green-50 text-green-700 ring-2 ring-green-500/20 shadow-sm"
+                          : "border-slate-200 bg-white/50 text-slate-600 hover:border-slate-300 hover:bg-white"
                       }`}
                     >
                       <input
@@ -243,10 +256,10 @@ export default function LoginPage() {
                       Öğrenci
                     </label>
                     <label
-                      className={`cursor-pointer rounded-lg border px-3 py-2.5 text-sm font-medium text-center transition ${
+                      className={`cursor-pointer rounded-xl border px-4 py-3 text-sm font-bold text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                         role === "hoca"
-                          ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/15"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-500/20 shadow-sm"
+                          : "border-slate-200 bg-white/50 text-slate-600 hover:border-slate-300 hover:bg-white"
                       }`}
                     >
                       <input
@@ -263,23 +276,24 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Butona Hover ve Gölge Efektleri Eklendi */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/40 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {loading ? "İşlem yapılıyor..." : isLogin ? "Giriş Yap" : "Kayıt Ol"}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-xs text-slate-500">
+            <p className="mt-8 text-center text-sm text-slate-500 font-medium">
               {isLogin ? (
                 <>
                   Hesabın yok mu?{" "}
                   <button
                     type="button"
                     onClick={() => switchMode(false)}
-                    className="font-semibold text-blue-600 hover:text-blue-700"
+                    className="font-bold text-blue-600 transition-colors hover:text-blue-800"
                   >
                     Hemen oluştur
                   </button>
@@ -290,7 +304,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => switchMode(true)}
-                    className="font-semibold text-blue-600 hover:text-blue-700"
+                    className="font-bold text-blue-600 transition-colors hover:text-blue-800"
                   >
                     Giriş yap
                   </button>

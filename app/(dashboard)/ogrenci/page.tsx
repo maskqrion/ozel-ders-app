@@ -1,331 +1,285 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import LessonsCalendar from "@/components/LessonsCalendar";
-import { attachSignedUrls } from "@/lib/storage";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
+import { attachSignedUrls } from "@/lib/storage";
+import type { UserProfile, Lesson, Assignment, Resource } from "@/lib/types";
 
-// Tipleri içe aktarıyoruz
-import { Lesson, Assignment, Resource } from "@/lib/types";
+import Tabs, { type TabDef } from "@/components/dashboard/Tabs";
+import GenelOzet from "@/components/dashboard/ogrenci/GenelOzet";
+import Odevlerim from "@/components/dashboard/ogrenci/Odevlerim";
+import DersTakvimi from "@/components/dashboard/ogrenci/DersTakvimi";
+import Kaynaklar from "@/components/dashboard/ogrenci/Kaynaklar";
+import OgretmenBul from "@/components/dashboard/ogrenci/OgretmenBul";
+import Mesajlar from "@/components/dashboard/shared/Mesajlar";
+import NotificationBell from "@/components/dashboard/shared/NotificationBell";
 
 export default function OgrenciPaneli() {
+  const router = useRouter();
+
   const [user, setUser] = useState<any>(null);
-  
-  // any yerine kendi oluşturduğumuz tipleri kullanıyoruz
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [dersler, setDersler] = useState<Lesson[]>([]);
   const [odevler, setOdevler] = useState<Assignment[]>([]);
-  const [kaynaklar, setKaynaklar] = useState<Resource[]>([]); 
+  const [kaynaklar, setKaynaklar] = useState<Resource[]>([]);
   const [siradakiDers, setSiradakiDers] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [submissionText, setSubmissionText] = useState<Record<string, string>>({});
-  const [submissionFile, setSubmissionFile] = useState<Record<string, File | null>>({});
-  const [submitting, setSubmitting] = useState<string | null>(null);
+  const fetchDersler = useCallback(async (ogrenciId: string) => {
+    const { data } = await supabase
+      .from("lessons")
+      .select(`id, hoca_id, ogrenci_id, lesson_date, status, users!lessons_hoca_id_fkey (email)`)
+      .eq("ogrenci_id", ogrenciId)
+      .order("lesson_date", { ascending: true });
+    if (data) {
+      const typed = data as unknown as Lesson[];
+      setDersler(typed);
+      setSiradakiDers(typed.find((d) => d.status === "bekliyor") || null);
+    }
+  }, []);
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const fetchOdevler = useCallback(async (ogrenciId: string) => {
+    const { data } = await supabase
+      .from("assignments")
+      .select(
+        `id, lesson_id, title, description, status, submission_text, submission_file_path, submitted_at, rejection_reason, score, lessons!inner(hoca_id, ogrenci_id, lesson_date, users!lessons_hoca_id_fkey(email))`,
+      )
+      .eq("lessons.ogrenci_id", ogrenciId)
+      .order("created_at", { ascending: false });
+    if (data) {
+      const enriched = await attachSignedUrls(data, "submission_file_path", "submission_signed_url");
+      setOdevler(enriched as unknown as Assignment[]);
+    }
+  }, []);
 
-  const router = useRouter();
-
-  const seciliGunDersleri = useMemo(() => {
-    if (!selectedDate) return [];
-    return dersler.filter((d) => {
-      const dd = new Date(d.lesson_date);
-      return (
-        dd.getFullYear() === selectedDate.getFullYear() &&
-        dd.getMonth() === selectedDate.getMonth() &&
-        dd.getDate() === selectedDate.getDate()
-      );
-    });
-  }, [dersler, selectedDate]);
+  const fetchKaynaklar = useCallback(async () => {
+    const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
+    if (data) {
+      const enriched = await attachSignedUrls(data, "file_path", "signed_url");
+      setKaynaklar(enriched as unknown as Resource[]);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: { user: currentUser }, error } = await supabase.auth.getUser();
+        const {
+          data: { user: currentUser },
+          error,
+        } = await supabase.auth.getUser();
         if (error || !currentUser) {
           await supabase.auth.signOut();
           return router.push("/login");
         }
         setUser(currentUser);
-        
-        await Promise.all([
-          fetchDersler(currentUser.id),
-          fetchOdevler(currentUser.id),
-          fetchKaynaklar()
-        ]);
+
+        const { data: profileData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", currentUser.id)
+          .single();
+        if (profileData) setProfile(profileData as UserProfile);
+
+        await Promise.all([fetchDersler(currentUser.id), fetchOdevler(currentUser.id), fetchKaynaklar()]);
         setLoading(false);
       } catch (err) {
         console.error("Beklenmedik hata:", err);
         router.push("/login");
       }
     };
+
     fetchData();
-  }, [router]);
+  }, [router, fetchDersler, fetchOdevler, fetchKaynaklar]);
 
-  const fetchDersler = async (ogrenciId: string) => {
-    const { data } = await supabase.from("lessons").select(`id, lesson_date, status, ogrenci_id, users!lessons_hoca_id_fkey (email)`).eq("ogrenci_id", ogrenciId).order("lesson_date", { ascending: true });
-    if (data) {
-      setDersler(data as Lesson[]);
-      setSiradakiDers((data as Lesson[]).find(d => d.status === 'bekliyor') || null);
-    }
-  };
+  useEffect(() => {
+    if (!user?.id) return;
 
-  const fetchOdevler = async (ogrenciId: string) => {
-    const { data } = await supabase.from("assignments").select(`id, title, description, status, submission_text, submission_file_path, submitted_at, rejection_reason, lessons!inner(ogrenci_id, lesson_date, users!lessons_hoca_id_fkey(email))`).eq("lessons.ogrenci_id", ogrenciId).order("created_at", { ascending: false });
-    if (data) {
-      const enriched = await attachSignedUrls(data, "submission_file_path", "submission_signed_url");
-      setOdevler(enriched as Assignment[]);
-    }
-  };
+    const channel = supabase
+      .channel("ogrenci-bildirimler")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "assignments" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            toast("📚 Yeni bir ödev verildi!", { icon: "🔔", duration: 4000 });
+          } else if (payload.eventType === "UPDATE" && payload.new.status === "reddedildi") {
+            toast.error("❌ Bir ödeviniz reddedildi!");
+          }
+          fetchOdevler(user.id);
+        },
+      )
+      .subscribe();
 
-  const fetchKaynaklar = async () => {
-    const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
-    if (data) {
-      const enriched = await attachSignedUrls(data, "file_path", "signed_url");
-      setKaynaklar(enriched as Resource[]);
-    }
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchOdevler]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
   };
 
-  const teslimEt = async (assignmentId: string) => {
-    const text = (submissionText[assignmentId] || "").trim();
-    const file = submissionFile[assignmentId];
-
-    if (!text && !file) {
-      toast.error("Teslim için en az bir açıklama veya dosya ekle.");
-      return;
-    }
-    if (!user) return;
-
-    setSubmitting(assignmentId);
-    try {
-      let filePath: string | null = null;
-
-      if (file) {
-        const ext = file.name.split('.').pop();
-        filePath = `submissions/${user.id}/${assignmentId}-${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('kaynaklar').upload(filePath, file);
-        if (uploadError) throw uploadError;
-      }
-
-      const { error } = await supabase.from('assignments').update({
-        submission_text: text || null,
-        submission_file_path: filePath,
-        submitted_at: new Date().toISOString(),
-        status: 'yapildi',
-        rejection_reason: null
-      }).eq('id', assignmentId);
-
-      if (error) throw error;
-
-      setSubmissionText(prev => {
-        const next = { ...prev };
-        delete next[assignmentId];
-        return next;
+  const onAwardXp = useCallback(
+    async (amount: number, action: string) => {
+      if (!user?.id) return;
+      toast.success(`+${amount} XP — ${action}`, {
+        icon: "✨",
+        duration: 2500,
+        style: {
+          background: "#fffbeb",
+          color: "#92400e",
+          border: "1px solid #fde68a",
+          fontWeight: 600,
+        },
       });
-      setSubmissionFile(prev => {
-        const next = { ...prev };
-        delete next[assignmentId];
-        return next;
+      const { data } = await supabase
+        .from("users")
+        .select("level, xp")
+        .eq("id", user.id)
+        .single();
+      if (!data) return;
+      setProfile((prev) => {
+        if (!prev) return prev;
+        if ((data.level ?? prev.level) > prev.level) {
+          toast(`🎉 Seviye atladın! Lv ${data.level}'e ulaştın.`, {
+            icon: "🚀",
+            duration: 4500,
+            style: {
+              background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+              color: "#78350f",
+              border: "1px solid #fbbf24",
+              fontWeight: 700,
+            },
+          });
+        }
+        return { ...prev, level: data.level ?? prev.level, xp: data.xp ?? prev.xp };
       });
+    },
+    [user?.id],
+  );
 
-      await fetchOdevler(user.id);
-      toast.success("Ödeviniz başarıyla teslim edildi.");
-    } catch (err: any) {
-      toast.error("Hata: " + err.message);
-    } finally {
-      setSubmitting(null);
-    }
-  };
+  const tabs: TabDef[] = useMemo(() => {
+    if (!user?.id) return [];
+    return [
+      {
+        id: "ozet",
+        label: "Genel Özet",
+        icon: "🎯",
+        content: (
+          <GenelOzet
+            userId={user.id}
+            siradakiDers={siradakiDers}
+            odevler={odevler}
+            level={profile?.level ?? 1}
+            xp={profile?.xp ?? 0}
+            refetchDersler={() => fetchDersler(user.id)}
+            refetchOdevler={() => fetchOdevler(user.id)}
+          />
+        ),
+      },
+      {
+        id: "odevlerim",
+        label: "Ödevlerim",
+        icon: "📝",
+        content: (
+          <Odevlerim
+            userId={user.id}
+            odevler={odevler}
+            refetchOdevler={() => fetchOdevler(user.id)}
+            onAwardXp={onAwardXp}
+          />
+        ),
+      },
+      {
+        id: "takvim",
+        label: "Ders Takvimi",
+        icon: "🗓️",
+        content: <DersTakvimi dersler={dersler} />,
+      },
+      {
+        id: "ogretmen-bul",
+        label: "Öğretmen Bul",
+        icon: "🔍",
+        content: <OgretmenBul currentUserId={user.id} />,
+      },
+      {
+        id: "mesajlar",
+        label: "Mesajlar",
+        icon: "💬",
+        content: <Mesajlar userId={user.id} role="ogrenci" />,
+      },
+      {
+        id: "kaynaklar",
+        label: "Kaynaklar",
+        icon: "📚",
+        content: <Kaynaklar kaynaklar={kaynaklar} />,
+      },
+    ];
+  }, [
+    user?.id,
+    profile?.level,
+    profile?.xp,
+    siradakiDers,
+    odevler,
+    dersler,
+    kaynaklar,
+    fetchDersler,
+    fetchOdevler,
+    onAwardXp,
+  ]);
 
-  if (loading) return <div className="flex justify-center items-center h-screen text-blue-600">Yükleniyor...</div>;
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-emerald-50 font-medium text-emerald-600">
+        Yükleniyor...
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-green-600">Öğrenci Paneli</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600 hidden sm:inline">{user?.email}</span>
-          <Link href="/profil" className="text-sm bg-green-50 text-green-600 px-3 py-1 rounded-md hover:bg-green-100 transition">Profil</Link>
-          <button onClick={handleLogout} className="text-sm bg-red-50 text-red-600 px-3 py-1 rounded-md hover:bg-red-100">Çıkış Yap</button>
+    <div className="min-h-screen bg-emerald-50/40 pb-20 font-sans text-slate-800">
+      <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-emerald-100 bg-white px-6 py-4 shadow-sm">
+        <h1 className="text-xl font-bold text-emerald-600">Öğrenci Paneli</h1>
+        <div className="flex items-center gap-4">
+          {user && <NotificationBell userId={user.id} />}
+          <Link href="/profil" className="group flex items-center gap-2">
+            <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition group-hover:border-emerald-400">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Profil" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full items-center justify-center text-xs">👤</span>
+              )}
+            </div>
+            <span className="hidden text-sm font-medium text-slate-700 transition group-hover:text-emerald-600 sm:inline">
+              Profilim
+            </span>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="rounded-md bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-100"
+          >
+            Çıkış Yap
+          </button>
         </div>
       </nav>
 
-      <main className="p-6 max-w-6xl mx-auto mt-6 space-y-8">
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-green-500">
-            <h3 className="text-gray-500 text-sm font-medium uppercase">Sıradaki Dersim</h3>
-            {siradakiDers ? (
-              <div className="mt-2">
-                <p className="text-2xl font-bold text-gray-800">{new Date(siradakiDers.lesson_date).toLocaleString('tr-TR')}</p>
-                <p className="text-sm text-gray-600 mt-1">Hoca: {siradakiDers.users?.email}</p>
-              </div>
-            ) : <p className="text-lg font-medium text-gray-400 mt-2">Planlanmış ders yok</p>}
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-indigo-500">
-            <h3 className="text-gray-500 text-sm font-medium uppercase">Bekleyen Ödevler</h3>
-            <p className="text-3xl font-bold text-gray-800 mt-2">{odevler.filter(o => o.status === 'verildi' || o.status === 'reddedildi').length}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Ödevlerim</h2>
-              <div className="space-y-4">
-                {odevler.length === 0 ? (
-                  <p className="text-gray-500 bg-white p-4 rounded-lg border">Henüz bir ödev tanımlanmadı.</p>
-                ) : (
-                  odevler.map(o => {
-                    const isCompleted = o.status === 'yapildi';
-                    const isRejected = o.status === 'reddedildi'; 
-
-                    return (
-                      <div key={o.id} className={`bg-white p-5 rounded-lg shadow-sm border ${isRejected ? 'border-red-300' : 'border-gray-100'}`}>
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-gray-900">{o.title}</h4>
-                            {o.description && <p className="text-gray-600 text-sm mt-1">{o.description}</p>}
-                          </div>
-                          
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
-                            isCompleted ? "bg-green-100 text-green-700" : 
-                            isRejected ? "bg-red-100 text-red-700" : 
-                            "bg-yellow-100 text-yellow-700"
-                          }`}>
-                            {isCompleted ? "Teslim Edildi" : isRejected ? "Reddedildi" : "Bekliyor"}
-                          </span>
-                        </div>
-
-                        {isRejected && (
-                          <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
-                            <p className="text-sm font-semibold text-red-800">Hocanız ödevinizi kabul etmedi!</p>
-                            {o.rejection_reason && (
-                              <p className="text-sm text-red-700 mt-1">
-                                <span className="font-semibold">Sebep:</span> {o.rejection_reason}
-                              </p>
-                            )}
-                            <p className="text-xs text-red-600 mt-2">Lütfen eksiklerinizi giderip aşağıdan tekrar teslim ediniz.</p>
-                          </div>
-                        )}
-
-                        {isCompleted ? (
-                          <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-                            {o.submitted_at && (
-                              <p className="text-xs text-gray-500">
-                                Teslim: {new Date(o.submitted_at).toLocaleString('tr-TR')}
-                              </p>
-                            )}
-                            {o.submission_text && (
-                              <div className="text-sm text-gray-700 bg-gray-50 rounded-md p-3 whitespace-pre-wrap">
-                                {o.submission_text}
-                              </div>
-                            )}
-                            {o.submission_signed_url && (
-                              <a
-                                href={o.submission_signed_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline"
-                              >
-                                Dosyanı görüntüle
-                              </a>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                            <textarea
-                              placeholder="Açıklama (opsiyonel)..."
-                              rows={2}
-                              value={submissionText[o.id] || ""}
-                              onChange={(e) => setSubmissionText(prev => ({ ...prev, [o.id]: e.target.value }))}
-                              className="w-full text-sm rounded-md border border-gray-200 px-3 py-2 placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 focus:outline-none transition"
-                            />
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                              <input
-                                type="file"
-                                onChange={(e) => setSubmissionFile(prev => ({ ...prev, [o.id]: e.target.files?.[0] || null }))}
-                                className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer flex-1 min-w-0"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => teslimEt(o.id)}
-                                disabled={submitting === o.id}
-                                className="rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
-                              >
-                                {submitting === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Ders Materyalleri ve Kaynaklar</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {kaynaklar.map(k => (
-                  <a key={k.id} href={k.signed_url || '#'} onClick={(e) => { if (!k.signed_url) e.preventDefault(); }} target="_blank" rel="noreferrer" className="p-4 border rounded-lg bg-white hover:bg-orange-50 flex items-center gap-3 transition-colors border-orange-100 shadow-sm">
-                    <div className="bg-orange-100 p-2 rounded text-orange-600">📄</div>
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{k.title}</p>
-                      <p className="text-[10px] text-gray-500 mt-1">Tıkla ve Görüntüle</p>
-                    </div>
-                  </a>
-                ))}
-                {kaynaklar.length === 0 && <p className="text-gray-500 bg-white p-4 rounded-lg border col-span-2">Henüz kaynak yüklenmedi.</p>}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Ders Takvimi</h2>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <LessonsCalendar
-                dersler={dersler}
-                accent="green"
-                value={selectedDate}
-                onChange={setSelectedDate}
-              />
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-3">
-                  {selectedDate
-                    ? selectedDate.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })
-                    : 'Bir gün seç'}
-                </p>
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                  {seciliGunDersleri.length === 0 && selectedDate && (
-                    <p className="text-sm text-gray-400">Bu gün için ders yok.</p>
-                  )}
-                  {seciliGunDersleri.map(d => (
-                    <div key={d.id} className="p-3 bg-gray-50 rounded-md border border-gray-100 flex justify-between items-center">
-                      <div className="text-sm min-w-0">
-                        <p className="font-medium text-gray-800 truncate">{d.users?.email}</p>
-                        <p className="text-gray-500 text-xs">{new Date(d.lesson_date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                      <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded whitespace-nowrap ${d.status === 'bekliyor' ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}`}>
-                        {d.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <main className="mx-auto mt-6 max-w-6xl space-y-6 p-6">
+        {user ? (
+          <Tabs tabs={tabs} accent="green" />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm"
+          >
+            Yükleniyor...
+          </motion.div>
+        )}
       </main>
     </div>
   );
