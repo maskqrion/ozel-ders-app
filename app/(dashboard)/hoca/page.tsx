@@ -240,6 +240,7 @@ export default function HocaPaneli() {
             odevler={gosterilecekOdevler}
             level={profile?.level ?? 1}
             xp={profile?.xp ?? 0}
+            fullName={profile?.full_name ?? undefined}
           />
         ),
       },

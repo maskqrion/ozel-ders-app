@@ -175,8 +175,10 @@ export default function OgrenciPaneli() {
             userId={user.id}
             siradakiDers={siradakiDers}
             odevler={odevler}
+            dersler={dersler}
             level={profile?.level ?? 1}
             xp={profile?.xp ?? 0}
+            fullName={profile?.full_name ?? undefined}
             refetchDersler={() => fetchDersler(user.id)}
             refetchOdevler={() => fetchOdevler(user.id)}
           />
