@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import LessonsCalendar from "@/components/LessonsCalendar";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { Lesson, UserProfile } from "@/lib/types";
 
 type Props = {

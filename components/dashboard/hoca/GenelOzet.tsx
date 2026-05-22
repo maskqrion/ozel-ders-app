@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { Assignment, UserProfile } from "@/lib/types";
 import { XP_PER_LEVEL } from "@/components/dashboard/shared/LevelProgressBar";
 import OgrenciDegerlendirmeleri from "@/components/dashboard/hoca/OgrenciDegerlendirmeleri";
@@ -623,7 +623,7 @@ export default function GenelOzet({
             Ödev Dağılımı
           </h3>
           <p className="text-xs text-slate-500 mb-5">Durum bazlı özet</p>
-          <div className="h-52">
+          <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={odevDurumGrafigi}

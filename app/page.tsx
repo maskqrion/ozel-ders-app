@@ -452,7 +452,7 @@ function Hero() {
               </div>
             </Reveal>
 
-            <Reveal delay={1} as="h1">
+            <Reveal delay={1} as="div">
               <h1 className="mt-6 text-[44px] sm:text-6xl lg:text-[68px] leading-[1.02] font-extrabold tracking-tight text-slate-900">
                 Hayalinizdeki <br className="hidden sm:block" />
                 Eğitimi{' '}
@@ -467,7 +467,7 @@ function Hero() {
               </h1>
             </Reveal>
 
-            <Reveal delay={2} as="p">
+            <Reveal delay={2} as="div">
               <p className="mt-6 text-lg text-slate-600 max-w-xl leading-relaxed">
                 Türkiye&apos;nin her köşesinden alanında uzman özel ders eğitmenlerini keşfedin.
                 Ücretsiz tanışma görüşmesi yapın, ödevlerinizi yönetin ve gelişiminizi tek bir
@@ -795,13 +795,13 @@ function Features() {
               Neden Özel Ders Pro
             </div>
           </Reveal>
-          <Reveal delay={1} as="h2">
+          <Reveal delay={1} as="div">
             <h2 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
               Sadece bir eşleştirme değil,{' '}
               <span className="text-slate-500">tüm bir öğrenme deneyimi.</span>
             </h2>
           </Reveal>
-          <Reveal delay={2} as="p">
+          <Reveal delay={2} as="div">
             <p className="mt-5 text-lg text-slate-600 leading-relaxed">
               Eğitmen bulmaktan ödev teslim etmeye, gelişim raporundan veli iletişimine — özel
               dersin tamamı tek platformda, sürtünmesiz.
@@ -935,12 +935,12 @@ function HowItWorks() {
               Nasıl çalışır
             </div>
           </Reveal>
-          <Reveal delay={1} as="h2">
+          <Reveal delay={1} as="div">
             <h2 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
               3 adımda <span className="text-sky-500">ilk dersine</span> başla.
             </h2>
           </Reveal>
-          <Reveal delay={2} as="p">
+          <Reveal delay={2} as="div">
             <p className="mt-5 text-lg text-slate-600">
               Karmaşık kayıt formları, gizli ücretler veya uzun bekleme yok. Bugün başvur, bu hafta
               derste ol.

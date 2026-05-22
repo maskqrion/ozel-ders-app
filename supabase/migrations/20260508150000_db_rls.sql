@@ -6,6 +6,9 @@
 -------------------------------------------------------------------------------
 -- 1. Helper functions: rol kontrolü (recursive RLS'i önlemek için SECURITY DEFINER)
 -------------------------------------------------------------------------------
+-- public.users sorgusu yerine doğrudan JWT'den okunur.
+-- public.users'a SELECT yapılsaydı users_select RLS politikası is_hoca()'yı
+-- tekrar çağırır → sonsuz özyineleme (stack depth exceeded) oluşurdu.
 create or replace function public.is_hoca()
 returns boolean
 language sql
@@ -14,7 +17,7 @@ security definer
 set search_path = public, pg_temp
 as $$
   select coalesce(
-    (select role = 'hoca' from public.users where id = auth.uid()),
+    auth.jwt() -> 'user_metadata' ->> 'role' = 'hoca',
     false
   );
 $$;
@@ -27,7 +30,7 @@ security definer
 set search_path = public, pg_temp
 as $$
   select coalesce(
-    (select role = 'ogrenci' from public.users where id = auth.uid()),
+    auth.jwt() -> 'user_metadata' ->> 'role' = 'ogrenci',
     false
   );
 $$;

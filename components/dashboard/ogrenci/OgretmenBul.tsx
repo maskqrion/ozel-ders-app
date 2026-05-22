@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import HocayiDegerlendirModal from "@/components/dashboard/ogrenci/HocayiDegerlendirModal";
 import VideoPlayer from "@/components/dashboard/shared/VideoPlayer";
 import RezervasyonMatrisi from "@/components/dashboard/ogrenci/RezervasyonMatrisi";
@@ -24,11 +24,18 @@ type Hoca = {
   level: number;
   xp: number;
 };
-
 type RatingStat = { avg: number; count: number };
 type SortId = "top" | "price-a" | "price-d" | "level-d";
 type Budget = { id: string; label: string; max?: number; min?: number };
-
+type SubjectId =
+  | "all"
+  | "matematik"
+  | "fizik"
+  | "kimya"
+  | "ingilizce"
+  | "tarih"
+  | "sort-top"
+  | "sort-level";
 type Props = { currentUserId: string };
 
 /* ============================================================
@@ -37,20 +44,20 @@ type Props = { currentUserId: string };
 const HOCA_SELECT =
   "id, full_name, avatar_url, sehir, ilce, ders_fiyati, hakkinda, video_url, portfolio_url, level, xp";
 
-const AV_PALETTE = [
-  "oklch(0.84 0.05 220)",
-  "oklch(0.86 0.05 150)",
-  "oklch(0.88 0.04 60)",
-  "oklch(0.86 0.05 320)",
-  "oklch(0.88 0.05 80)",
-  "oklch(0.85 0.05 200)",
+const AV_COLORS = [
+  { from: "#10b981", to: "#065f46" },
+  { from: "#38bdf8", to: "#0369a1" },
+  { from: "#a78bfa", to: "#6d28d9" },
+  { from: "#fb923c", to: "#c2410c" },
+  { from: "#f472b6", to: "#be185d" },
+  { from: "#4ade80", to: "#166534" },
 ];
 
 const BUDGETS: Budget[] = [
-  { id: "all", label: "Tümü" },
+  { id: "all", label: "Tüm Bütçeler" },
   { id: "b1", label: "₺0 – 300", max: 300 },
-  { id: "b2", label: "₺300 – 500", max: 500 },
-  { id: "b3", label: "₺500 – 750", max: 750 },
+  { id: "b2", label: "₺300 – 500", max: 500, min: 300 },
+  { id: "b3", label: "₺500 – 750", max: 750, min: 500 },
   { id: "b4", label: "₺750+", min: 750 },
 ];
 
@@ -61,20 +68,35 @@ const SORTS: { id: SortId; label: string }[] = [
   { id: "level-d", label: "En yüksek seviye" },
 ];
 
+const SUBJECTS: { id: SubjectId; label: string }[] = [
+  { id: "all", label: "Tümü" },
+  { id: "matematik", label: "Matematik" },
+  { id: "fizik", label: "Fizik" },
+  { id: "kimya", label: "Kimya" },
+  { id: "ingilizce", label: "İngilizce" },
+  { id: "tarih", label: "Tarih" },
+  { id: "sort-top", label: "En Yüksek Puanlılar" },
+  { id: "sort-level", label: "En Yüksek Seviye" },
+];
+
 /* ============================================================
    HELPERS
    ============================================================ */
-function avatarBg(id: string): string {
+function avatarColors(id: string) {
   const code = id.charCodeAt(0) + (id.charCodeAt(id.length - 1) || 0);
-  return AV_PALETTE[code % AV_PALETTE.length];
+  return AV_COLORS[code % AV_COLORS.length];
 }
-
 function initials(name: string | null): string {
   if (!name) return "H";
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "H";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") || "H"
+  );
 }
-
 function isSafeHttpUrl(raw: string | null | undefined): boolean {
   if (!raw) return false;
   try {
@@ -88,14 +110,17 @@ function isSafeHttpUrl(raw: string | null | undefined): boolean {
 /* ============================================================
    INLINE ICONS
    ============================================================ */
-type IconProps = { size?: number; strokeWidth?: number; className?: string };
-
-const IconBase = ({
+const Ic = ({
   children,
   size = 24,
-  strokeWidth = 1.75,
+  sw = 1.75,
   className = "",
-}: IconProps & { children: React.ReactNode }) => (
+}: {
+  children: React.ReactNode;
+  size?: number;
+  sw?: number;
+  className?: string;
+}) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -103,7 +128,7 @@ const IconBase = ({
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth={strokeWidth}
+    strokeWidth={sw}
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
@@ -113,79 +138,79 @@ const IconBase = ({
   </svg>
 );
 
-const Search = (p: IconProps) => (
-  <IconBase {...p}>
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </IconBase>
+type IP = { size?: number; sw?: number; className?: string };
+
+const ISearch = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
+    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+  </Ic>
 );
-const X = (p: IconProps) => (
-  <IconBase {...p}>
+const IX = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-  </IconBase>
+  </Ic>
 );
-const ChevronDown = (p: IconProps) => (
-  <IconBase {...p}><path d="m6 9 6 6 6-6" /></IconBase>
+const IChevDown = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}><path d="m6 9 6 6 6-6" /></Ic>
 );
-const Check = (p: IconProps) => (
-  <IconBase {...p}><path d="M20 6 9 17l-5-5" /></IconBase>
+const ICheck = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}><path d="M20 6 9 17l-5-5" /></Ic>
 );
-const BadgeCheck = (p: IconProps) => (
-  <IconBase {...p}>
+const IBadge = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
     <path d="m9 12 2 2 4-4" />
-  </IconBase>
+  </Ic>
 );
-const Sparkles = (p: IconProps) => (
-  <IconBase {...p}>
+const ISparkles = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-    <path d="M20 3v4" /><path d="M22 5h-4" />
-    <path d="M4 17v2" /><path d="M5 18H3" />
-  </IconBase>
+    <path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" />
+  </Ic>
 );
-const Heart = (p: IconProps) => (
-  <IconBase {...p}>
+const IHeart = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-  </IconBase>
+  </Ic>
 );
-const MapPin = (p: IconProps) => (
-  <IconBase {...p}>
+const IPin = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
     <circle cx="12" cy="10" r="3" />
-  </IconBase>
+  </Ic>
 );
-const Star = (p: IconProps) => (
-  <IconBase {...p}>
+const IStar = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />
-  </IconBase>
+  </Ic>
 );
-const ArrowRight = (p: IconProps) => (
-  <IconBase {...p}>
+const IArrow = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
     <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-  </IconBase>
+  </Ic>
 );
-const SlidersHorizontal = (p: IconProps) => (
-  <IconBase {...p}>
-    <line x1="21" x2="14" y1="4" y2="4" />
-    <line x1="10" x2="3" y1="4" y2="4" />
-    <line x1="21" x2="12" y1="12" y2="12" />
-    <line x1="8" x2="3" y1="12" y2="12" />
-    <line x1="21" x2="16" y1="20" y2="20" />
-    <line x1="12" x2="3" y1="20" y2="20" />
-    <line x1="14" x2="14" y1="2" y2="6" />
-    <line x1="8" x2="8" y1="10" y2="14" />
-    <line x1="16" x2="16" y1="18" y2="22" />
-  </IconBase>
+const ISliders = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
+    <line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" />
+    <line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" />
+    <line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" />
+    <line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" />
+  </Ic>
 );
-const Play = (p: IconProps) => (
-  <IconBase {...p}><polygon points="6 3 20 12 6 21 6 3" /></IconBase>
+const IPlay = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}><polygon points="6 3 20 12 6 21 6 3" /></Ic>
 );
-const ExternalLink = (p: IconProps) => (
-  <IconBase {...p}>
-    <path d="M15 3h6v6" />
-    <path d="M10 14 21 3" />
+const IExtLink = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
+    <path d="M15 3h6v6" /><path d="M10 14 21 3" />
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-  </IconBase>
+  </Ic>
+);
+const IEye = ({ size = 24, sw = 1.75, className = "" }: IP) => (
+  <Ic size={size} sw={sw} className={className}>
+    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+    <circle cx="12" cy="12" r="3" />
+  </Ic>
 );
 
 /* ============================================================
@@ -195,14 +220,14 @@ function Stars({ value, size = 13 }: { value: number; size?: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <Star
+        <IStar
           key={i}
           size={size}
-          strokeWidth={1.5}
+          sw={1.5}
           className={
             i < Math.round(value)
               ? "fill-amber-400 text-amber-400"
-              : "fill-slate-200 text-slate-200"
+              : "fill-white/[0.08] text-white/[0.08]"
           }
         />
       ))}
@@ -211,59 +236,47 @@ function Stars({ value, size = 13 }: { value: number; size?: number }) {
 }
 
 /* ============================================================
-   FILTER SELECT (custom dropdown)
+   BUDGET DROPDOWN  (dark glass)
    ============================================================ */
-type DropdownOpt = { id: string; label: string } | string;
-
-function FilterSelect({
-  icon: Icon,
-  label,
+function BudgetDropdown({
   value,
-  options,
   onChange,
-  valueLabel,
 }: {
-  icon: (p: IconProps) => React.JSX.Element;
-  label: string;
   value: string;
-  options: DropdownOpt[];
   onChange: (v: string) => void;
-  valueLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  const active = BUDGETS.find((b) => b.id === value);
+
   return (
-    <div className="relative flex-1 min-w-[140px]" ref={ref}>
+    <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-4 h-12 rounded-2xl border bg-white transition text-left ${
+        className={`flex items-center gap-2 px-3.5 h-9 rounded-xl border text-sm font-semibold transition-all duration-200 ${
           open
-            ? "border-emerald-300 ring-4 ring-emerald-100"
-            : "border-slate-200 hover:border-slate-300"
+            ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-300"
+            : "border-white/10 bg-white/[0.05] text-white/50 hover:border-white/20 hover:text-white/75"
         }`}
       >
-        <Icon size={17} className="text-slate-400 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400 -mb-0.5">
-            {label}
-          </div>
-          <div className="text-sm font-semibold text-slate-800 truncate">
-            {valueLabel ?? value}
-          </div>
-        </div>
-        <ChevronDown
-          size={16}
-          className={`text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        <ISliders size={13} sw={2} />
+        <span className="hidden sm:inline max-w-[90px] truncate">
+          {active?.label ?? "Bütçe"}
+        </span>
+        <IChevDown
+          size={13}
+          sw={2}
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -273,29 +286,29 @@ function FilterSelect({
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute z-20 left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-[0_8px_32px_-8px_rgba(15,23,42,.14)] p-1.5 max-h-72 overflow-auto"
+            transition={{ duration: 0.14 }}
+            className="absolute right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-[#0d1f38]/95 backdrop-blur-xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.9)] p-1.5 z-30"
           >
-            {options.map((opt) => {
-              const id = typeof opt === "string" ? opt : opt.id;
-              const lbl = typeof opt === "string" ? opt : opt.label;
-              const active = value === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => { onChange(id); setOpen(false); }}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition ${
-                    active
-                      ? "bg-emerald-50 text-emerald-800 font-bold"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <span className="truncate">{lbl}</span>
-                  {active && <Check size={14} strokeWidth={3} className="text-emerald-600 shrink-0" />}
-                </button>
-              );
-            })}
+            {BUDGETS.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => {
+                  onChange(b.id);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                  value === b.id
+                    ? "bg-emerald-500/15 text-emerald-300 font-semibold"
+                    : "text-white/55 hover:bg-white/[0.06] hover:text-white/85"
+                }`}
+              >
+                {b.label}
+                {value === b.id && (
+                  <ICheck size={13} sw={3} className="text-emerald-400 shrink-0" />
+                )}
+              </button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -304,7 +317,7 @@ function FilterSelect({
 }
 
 /* ============================================================
-   SORT MENU
+   SORT MENU  (dark glass)
    ============================================================ */
 function SortMenu({
   value,
@@ -317,11 +330,11 @@ function SortMenu({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
   const active = SORTS.find((s) => s.id === value);
@@ -331,13 +344,14 @@ function SortMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-sm font-semibold text-slate-700 transition"
+        className="inline-flex items-center gap-2 px-3.5 h-9 rounded-xl border border-white/10 bg-white/[0.04] hover:border-white/20 text-sm font-semibold text-white/50 hover:text-white/75 transition-all duration-200"
       >
-        <SlidersHorizontal size={14} className="text-slate-400" />
-        {active?.label}
-        <ChevronDown
-          size={14}
-          className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        <ISliders size={13} sw={2} />
+        <span className="hidden sm:inline">{active?.label}</span>
+        <IChevDown
+          size={13}
+          sw={2}
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -347,23 +361,26 @@ function SortMenu({
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border border-slate-200 shadow-[0_8px_32px_-8px_rgba(15,23,42,.14)] p-1.5 z-20"
+            transition={{ duration: 0.14 }}
+            className="absolute right-0 mt-2 w-52 rounded-2xl border border-white/10 bg-[#0d1f38]/95 backdrop-blur-xl shadow-[0_20px_60px_-12px_rgba(0,0,0,0.9)] p-1.5 z-30"
           >
             {SORTS.map((s) => (
               <button
                 key={s.id}
                 type="button"
-                onClick={() => { onChange(s.id); setOpen(false); }}
-                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition ${
+                onClick={() => {
+                  onChange(s.id);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                   value === s.id
-                    ? "bg-emerald-50 text-emerald-800 font-bold"
-                    : "text-slate-700 hover:bg-slate-50"
+                    ? "bg-emerald-500/15 text-emerald-300 font-semibold"
+                    : "text-white/55 hover:bg-white/[0.06] hover:text-white/85"
                 }`}
               >
                 {s.label}
                 {value === s.id && (
-                  <Check size={14} strokeWidth={3} className="text-emerald-600" />
+                  <ICheck size={13} sw={3} className="text-emerald-400 shrink-0" />
                 )}
               </button>
             ))}
@@ -379,25 +396,26 @@ function SortMenu({
    ============================================================ */
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+    <div className="animate-pulse rounded-3xl border border-white/[0.06] bg-white/[0.03] p-6 flex flex-col gap-4">
       <div className="flex items-start gap-4">
-        <div className="h-16 w-16 rounded-2xl bg-slate-100 shrink-0" />
-        <div className="flex-1 space-y-2 pt-1">
-          <div className="h-4 w-32 rounded bg-slate-100" />
-          <div className="h-3 w-24 rounded bg-slate-100" />
-          <div className="h-3 w-28 rounded bg-slate-100" />
+        <div className="h-16 w-16 rounded-2xl bg-white/[0.08] shrink-0" />
+        <div className="flex-1 space-y-2.5 pt-1">
+          <div className="h-4 w-28 rounded-full bg-white/[0.08]" />
+          <div className="h-3 w-20 rounded-full bg-white/[0.06]" />
+          <div className="h-3 w-32 rounded-full bg-white/[0.06]" />
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="space-y-2">
+        <div className="h-3 w-full rounded-full bg-white/[0.06]" />
+        <div className="h-3 w-4/5 rounded-full bg-white/[0.05]" />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-14 rounded-xl bg-slate-100" />
+          <div key={i} className="h-14 rounded-xl bg-white/[0.06]" />
         ))}
       </div>
-      <div className="mt-4 h-px bg-slate-100" />
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="h-8 w-20 rounded bg-slate-100" />
-        <div className="h-9 w-28 rounded-xl bg-slate-100" />
-      </div>
+      <div className="h-10 rounded-2xl bg-white/[0.06]" />
+      <div className="h-9 rounded-2xl bg-white/[0.04]" />
     </div>
   );
 }
@@ -408,26 +426,25 @@ function SkeletonCard() {
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white border border-slate-200 rounded-3xl p-16 text-center shadow-sm"
+      className="col-span-full flex flex-col items-center justify-center py-24 text-center"
     >
-      <div className="mx-auto h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 grid place-items-center">
-        <Search size={22} strokeWidth={2.2} />
+      <div className="w-16 h-16 rounded-2xl border border-white/10 bg-white/[0.04] grid place-items-center mb-5">
+        <ISearch size={24} sw={1.5} className="text-white/25" />
       </div>
-      <h3 className="mt-5 text-xl font-extrabold tracking-tight text-slate-900">
-        Bu filtrelerle eşleşen hoca bulunamadı.
+      <h3 className="text-xl font-bold tracking-tight text-white/60">
+        Bu filtrelerle eşleşen eğitmen bulunamadı.
       </h3>
-      <p className="mt-1.5 text-sm text-slate-500 max-w-md mx-auto">
-        Filtreleri biraz gevşetmeyi dene veya tümünü temizle. Her gün yeni eğitmenler katılıyor.
+      <p className="mt-2 text-sm text-white/30 max-w-sm">
+        Filtreleri gevşetmeyi dene ya da tümünü temizle. Her gün yeni eğitmenler katılıyor.
       </p>
       <button
         type="button"
         onClick={onClear}
-        className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 text-white text-sm font-bold rounded-xl shadow-[0_8px_24px_-8px_rgba(16,185,129,.5)] transition hover:-translate-y-px"
-        style={{ background: "linear-gradient(180deg, #10b981 0%, #059669 100%)" }}
+        className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-300 text-sm font-semibold transition-all hover:bg-emerald-500/20 hover:border-emerald-400/50"
       >
-        <X size={14} strokeWidth={2.5} />
+        <IX size={14} sw={2.5} />
         Filtreleri temizle
       </button>
     </motion.div>
@@ -435,7 +452,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
 }
 
 /* ============================================================
-   HOCA CARD
+   HOCA CARD  (glassmorphism)
    ============================================================ */
 function HocaCard({
   h,
@@ -458,200 +475,239 @@ function HocaCard({
   onDersTalep: (h: Hoca) => void;
   onVideoOpen: (h: Hoca) => void;
 }) {
-  const bg = h.avatar_url ? undefined : avatarBg(h.id);
+  const colors = avatarColors(h.id);
   const isSuperHoca = stat && stat.avg >= 4.8 && stat.count >= 5;
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.32, delay: Math.min(index * 0.05, 0.4), ease: "easeOut" }}
-      whileHover={{ y: -4, boxShadow: "0 20px 48px -12px rgba(15,23,42,.12)" }}
-      className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm flex flex-col"
+      transition={{
+        duration: 0.4,
+        delay: Math.min(index * 0.06, 0.45),
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      whileHover={{
+        y: -6,
+        scale: 1.02,
+        transition: { type: "spring", stiffness: 320, damping: 22 },
+      }}
+      className="relative flex flex-col rounded-3xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl overflow-hidden group"
+      style={{
+        boxShadow:
+          "0 4px 40px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
     >
-      {/* Top: avatar + fav */}
-      <div className="flex items-start gap-4">
-        <div className="relative shrink-0">
-          <div
-            className="h-16 w-16 rounded-2xl grid place-items-center text-base font-extrabold text-slate-700 ring-4 ring-white overflow-hidden"
-            style={{ background: bg }}
-          >
-            {h.avatar_url ? (
-              <img src={h.avatar_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              initials(h.full_name)
-            )}
+      {/* Hover glow border */}
+      <div className="absolute inset-0 rounded-3xl border border-emerald-400/0 group-hover:border-emerald-400/20 transition-colors duration-500 pointer-events-none z-10" />
+
+      {/* Super eğitmen top accent */}
+      {isSuperHoca && (
+        <div
+          className="h-[2px] w-full shrink-0"
+          style={{
+            background: `linear-gradient(90deg, transparent, ${colors.from} 40%, transparent)`,
+          }}
+        />
+      )}
+
+      <div className="p-5 flex flex-col flex-1">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className="relative shrink-0">
+            <div
+              className="h-16 w-16 rounded-2xl grid place-items-center text-[15px] font-black text-white overflow-hidden ring-2 ring-white/10"
+              style={
+                h.avatar_url
+                  ? undefined
+                  : {
+                      background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
+                    }
+              }
+            >
+              {h.avatar_url ? (
+                <img src={h.avatar_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials(h.full_name)
+              )}
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#0a1628] bg-emerald-400" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-[16px] font-bold tracking-tight text-white truncate">
+                    {h.full_name || "İsimsiz Hoca"}
+                  </h3>
+                  <IBadge size={14} sw={2.4} className="text-sky-400 shrink-0" />
+                </div>
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-white/35">
+                  <IPin size={11} sw={2} />
+                  {h.sehir || h.ilce
+                    ? [h.sehir, h.ilce].filter(Boolean).join(" / ")
+                    : "Konum belirtilmemiş"}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onFav(h.id)}
+                aria-label={faved ? "Favoriden çıkar" : "Favorile"}
+                className={`shrink-0 h-8 w-8 grid place-items-center rounded-xl border transition-all duration-200 ${
+                  faved
+                    ? "bg-rose-500/15 border-rose-400/30 text-rose-400"
+                    : "border-white/10 bg-white/[0.04] text-white/25 hover:text-rose-400 hover:border-rose-400/30 hover:bg-rose-500/[0.08]"
+                }`}
+              >
+                <IHeart size={14} sw={2.2} className={faved ? "fill-rose-400" : ""} />
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2">
+              <Stars value={stat?.avg ?? 0} />
+              {stat ? (
+                <>
+                  <span className="text-sm font-bold text-amber-400">
+                    {stat.avg.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-white/30">({stat.count})</span>
+                </>
+              ) : (
+                <span className="text-xs text-white/20">Henüz değerlendirme yok</span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-[17px] font-bold tracking-tight text-slate-900 truncate">
-                  {h.full_name || "İsimsiz Hoca"}
-                </h3>
-                <BadgeCheck size={15} strokeWidth={2.4} className="text-sky-500 shrink-0" />
+        {/* Super badge */}
+        {isSuperHoca && (
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
+              <ISparkles size={10} sw={2.5} />
+              Süper Eğitmen
+            </span>
+          </div>
+        )}
+
+        {/* Bio */}
+        <p className="mt-3.5 text-sm text-white/40 leading-relaxed line-clamp-2 min-h-[2.5rem]">
+          {h.hakkinda?.trim() || (
+            <span className="italic text-white/20">
+              Hoca henüz hakkında metni eklememiş.
+            </span>
+          )}
+        </p>
+
+        {/* Stats grid */}
+        <div className="mt-4 grid grid-cols-3 gap-1.5">
+          {[
+            { label: "Seviye", value: `Lv ${h.level}` },
+            { label: "Puan", value: stat ? stat.avg.toFixed(1) : "—" },
+            { label: "XP", value: h.xp.toLocaleString("tr-TR") },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2.5 text-center"
+            >
+              <div className="text-[9px] uppercase tracking-widest text-white/25 font-semibold">
+                {label}
               </div>
-              <div className="mt-0.5 text-xs text-slate-500 truncate flex items-center gap-1">
-                <MapPin size={11} strokeWidth={2.2} className="text-slate-400 shrink-0" />
-                {h.sehir || h.ilce
-                  ? [h.sehir, h.ilce].filter(Boolean).join(" / ")
-                  : "Konum belirtilmemiş"}
+              <div className="mt-0.5 text-sm font-black text-white/75 font-mono">
+                {value}
               </div>
             </div>
+          ))}
+        </div>
+
+        {/* Price + Ders talep */}
+        <div className="mt-4 pt-4 border-t border-white/[0.06] flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-[9px] uppercase tracking-widest text-white/25 font-semibold">
+              Saatlik ücret
+            </div>
+            <div className="text-lg font-black text-white tracking-tight leading-tight">
+              {h.ders_fiyati != null ? (
+                <>
+                  ₺{h.ders_fiyati.toLocaleString("tr-TR")}
+                  <span className="text-xs font-normal text-white/25 ml-1">/ saat</span>
+                </>
+              ) : (
+                <span className="text-sm font-medium text-white/20">Belirtilmemiş</span>
+              )}
+            </div>
+          </div>
+          <motion.button
+            type="button"
+            onClick={() => onDersTalep(h)}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            className="text-white text-sm font-bold px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #10b981, #059669)",
+              boxShadow: "0 6px 24px -8px rgba(16,185,129,0.5)",
+            }}
+          >
+            Ders Talep Et
+            <IArrow size={13} sw={2.5} />
+          </motion.button>
+        </div>
+
+        {/* Profili İncele */}
+        <a
+          href={`/hoca/${h.id}`}
+          className="mt-3 flex items-center justify-center gap-2 w-full rounded-2xl border border-white/[0.07] bg-white/[0.02] hover:border-emerald-400/30 hover:bg-emerald-500/[0.06] py-2.5 text-sm font-semibold text-white/40 hover:text-emerald-300 transition-all duration-200"
+        >
+          <IEye size={14} sw={2} />
+          Profili İncele
+        </a>
+
+        {/* Video + Portfolio */}
+        {(isSafeHttpUrl(h.video_url) || isSafeHttpUrl(h.portfolio_url)) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {isSafeHttpUrl(h.video_url) && (
+              <button
+                type="button"
+                onClick={() => onVideoOpen(h)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/20 bg-sky-400/[0.07] px-3 py-1.5 text-xs font-semibold text-sky-400 hover:border-sky-400/35 hover:bg-sky-400/[0.12] transition-all"
+              >
+                <IPlay size={11} sw={2.5} />
+                Tanıtım Videosu
+              </button>
+            )}
+            {isSafeHttpUrl(h.portfolio_url) && (
+              <a
+                href={h.portfolio_url ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:border-emerald-400/35 hover:bg-emerald-400/[0.12] transition-all"
+              >
+                <IExtLink size={11} sw={2.5} />
+                Portfolyo
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Review */}
+        <div className="mt-3">
+          {hasReviewed ? (
+            <div className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 text-xs text-white/25 w-full">
+              <ICheck size={11} sw={3} className="text-emerald-500" />
+              Bu hocayı değerlendirdiniz
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={() => onFav(h.id)}
-              aria-label={faved ? "Favoriden çıkar" : "Favorile"}
-              className={`shrink-0 h-9 w-9 grid place-items-center rounded-xl border transition ${
-                faved
-                  ? "bg-rose-50 border-rose-200 text-rose-500"
-                  : "bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200"
-              }`}
+              onClick={() => onReview(h)}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-1.5 text-xs font-semibold text-amber-400 hover:border-amber-400/35 hover:bg-amber-400/[0.12] transition-all"
             >
-              <Heart
-                size={16}
-                strokeWidth={2.2}
-                className={faved ? "fill-rose-500" : ""}
-              />
+              <IStar size={11} sw={1.5} className="fill-amber-400 text-amber-400" />
+              Hocayı Değerlendir
             </button>
-          </div>
-
-          {/* Rating */}
-          <div className="mt-2.5 flex items-center gap-2">
-            <Stars value={stat?.avg ?? 0} />
-            {stat ? (
-              <>
-                <span className="text-sm font-bold text-slate-900">{stat.avg.toFixed(1)}</span>
-                <span className="text-xs text-slate-500">({stat.count})</span>
-              </>
-            ) : (
-              <span className="text-xs text-slate-400">Henüz değerlendirme yok</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Süper Hoca badge */}
-      {isSuperHoca && (
-        <div className="mt-3.5">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-            <Sparkles size={11} strokeWidth={2.5} />
-            Süper Hoca
-          </span>
-        </div>
-      )}
-
-      {/* Hakkında */}
-      <p className="mt-3.5 text-sm text-slate-600 leading-relaxed line-clamp-2 min-h-[2.5rem]">
-        {h.hakkinda?.trim() || (
-          <span className="text-slate-400 italic">
-            Hoca henüz hakkında metni eklememiş.
-          </span>
-        )}
-      </p>
-
-      {/* Meta row */}
-      <div className="mt-4 grid grid-cols-3 gap-1.5 text-[11px]">
-        <div className="bg-slate-50 rounded-xl px-2 py-2 text-center">
-          <div className="text-slate-500 uppercase tracking-wider font-semibold">Seviye</div>
-          <div className="mt-0.5 text-sm font-bold text-slate-900">Lv {h.level}</div>
-        </div>
-        <div className="bg-slate-50 rounded-xl px-2 py-2 text-center">
-          <div className="text-slate-500 uppercase tracking-wider font-semibold">Puan</div>
-          <div className="mt-0.5 text-sm font-bold text-slate-900">
-            {stat ? stat.avg.toFixed(1) : "—"}
-          </div>
-        </div>
-        <div className="bg-slate-50 rounded-xl px-2 py-2 text-center">
-          <div className="text-slate-500 uppercase tracking-wider font-semibold">XP</div>
-          <div className="mt-0.5 text-sm font-bold text-slate-900">
-            {h.xp.toLocaleString("tr-TR")}
-          </div>
-        </div>
-      </div>
-
-      {/* Price + CTA */}
-      <div className="mt-4 pt-4 border-t border-dashed border-slate-200 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400">
-            Saatlik ücret
-          </div>
-          <div className="text-lg font-extrabold text-slate-900 tracking-tight leading-tight">
-            {h.ders_fiyati != null ? (
-              <>
-                ₺{h.ders_fiyati.toLocaleString("tr-TR")}
-                <span className="text-xs font-normal text-slate-500 ml-1">/ saat</span>
-              </>
-            ) : (
-              <span className="text-sm font-medium text-slate-400">Belirtilmemiş</span>
-            )}
-          </div>
-        </div>
-        <motion.button
-          type="button"
-          onClick={() => onDersTalep(h)}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-[0_6px_20px_-6px_rgba(16,185,129,.5)] inline-flex items-center gap-1.5 transition hover:-translate-y-px"
-          style={{ background: "linear-gradient(180deg, #10b981 0%, #059669 100%)" }}
-        >
-          Ders Talep Et
-          <ArrowRight size={14} strokeWidth={2.5} />
-        </motion.button>
-      </div>
-
-      {/* Video + Portfolio buttons */}
-      {(isSafeHttpUrl(h.video_url) || isSafeHttpUrl(h.portfolio_url)) && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {isSafeHttpUrl(h.video_url) && (
-            <motion.button
-              type="button"
-              onClick={() => onVideoOpen(h)}
-              whileHover={{ scale: 1.04, boxShadow: "0 0 0 4px rgba(56,189,248,.18)" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 320, damping: 22 }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100"
-            >
-              <Play size={12} strokeWidth={2.5} />
-              Tanıtım Videosu
-            </motion.button>
-          )}
-          {isSafeHttpUrl(h.portfolio_url) && (
-            <motion.a
-              href={h.portfolio_url ?? "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={{ scale: 1.04, boxShadow: "0 0 0 4px rgba(16,185,129,.18)" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 320, damping: 22 }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
-            >
-              <ExternalLink size={12} strokeWidth={2.5} />
-              Portfolyo
-            </motion.a>
           )}
         </div>
-      )}
-
-      {/* Review button */}
-      <div className="mt-3">
-        {hasReviewed ? (
-          <div className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 w-full">
-            <Check size={12} strokeWidth={3} className="text-emerald-500" />
-            Bu hocayı değerlendirdiniz
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onReview(h)}
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100"
-          >
-            <Star size={12} className="fill-amber-400 text-amber-400" />
-            Hocayı Değerlendir
-          </button>
-        )}
       </div>
     </motion.article>
   );
@@ -661,9 +717,8 @@ function HocaCard({
    MAIN COMPONENT
    ============================================================ */
 export default function OgretmenBul({ currentUserId }: Props) {
-  /* ── Existing Supabase state (unchanged) ─────────────────── */
   const [sehir, setSehir] = useState("");
-  const [ilce, setIlce] = useState("");
+  const [ilce] = useState("");
   const [hocalar, setHocalar] = useState<Hoca[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -675,13 +730,13 @@ export default function OgretmenBul({ currentUserId }: Props) {
   const [videoTarget, setVideoTarget] = useState<Hoca | null>(null);
   const [rezervasyonTarget, setRezervasyonTarget] = useState<Hoca | null>(null);
 
-  /* ── New UI-only state ───────────────────────────────────── */
   const [queryText, setQueryText] = useState("");
   const [budgetFilter, setBudgetFilter] = useState("all");
   const [sortBy, setSortBy] = useState<SortId>("top");
   const [faves, setFaves] = useState<Set<string>>(new Set());
+  const [subjectFilter, setSubjectFilter] = useState<SubjectId>("all");
 
-  /* ── Existing callbacks (unchanged) ─────────────────────── */
+  /* ── Data fetching ────────────────────────────────────────── */
   const fetchRatings = useCallback(
     async (hocaIds: string[]) => {
       if (hocaIds.length === 0) {
@@ -751,11 +806,9 @@ export default function OgretmenBul({ currentUserId }: Props) {
     [fetchRatings],
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchHocalar("", "");
   }, [fetchHocalar]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -764,13 +817,12 @@ export default function OgretmenBul({ currentUserId }: Props) {
 
   const temizle = () => {
     setSehir("");
-    setIlce("");
     setQueryText("");
     setBudgetFilter("all");
     setSortBy("top");
+    setSubjectFilter("all");
     fetchHocalar("", "");
   };
-
 
   const handleReviewSaved = useCallback(async () => {
     await fetchRatings(hocalar.map((h) => h.id));
@@ -779,16 +831,22 @@ export default function OgretmenBul({ currentUserId }: Props) {
   const onFav = (id: string) => {
     setFaves((s) => {
       const next = new Set(s);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  /* ── Client-side filtering & sorting (on top of Supabase results) ── */
+  const onSubjectClick = (id: SubjectId) => {
+    setSubjectFilter(id);
+    if (id === "sort-top") setSortBy("top");
+    else if (id === "sort-level") setSortBy("level-d");
+  };
+
+  /* ── Client-side filtering ────────────────────────────────── */
   const filteredHocalar = useMemo(() => {
     let arr = [...hocalar];
 
-    // Name / bio text search
     const q = queryText.trim().toLowerCase();
     if (q) {
       arr = arr.filter(
@@ -799,7 +857,16 @@ export default function OgretmenBul({ currentUserId }: Props) {
       );
     }
 
-    // Budget filter
+    if (
+      subjectFilter !== "all" &&
+      subjectFilter !== "sort-top" &&
+      subjectFilter !== "sort-level"
+    ) {
+      arr = arr.filter((h) =>
+        (h.hakkinda || "").toLowerCase().includes(subjectFilter),
+      );
+    }
+
     if (budgetFilter !== "all") {
       const b = BUDGETS.find((x) => x.id === budgetFilter);
       if (b) {
@@ -812,7 +879,6 @@ export default function OgretmenBul({ currentUserId }: Props) {
       }
     }
 
-    // Sort
     arr.sort((a, b) => {
       switch (sortBy) {
         case "price-a":
@@ -830,191 +896,190 @@ export default function OgretmenBul({ currentUserId }: Props) {
     });
 
     return arr;
-  }, [hocalar, queryText, budgetFilter, sortBy, ratings]);
+  }, [hocalar, queryText, subjectFilter, budgetFilter, sortBy, ratings]);
 
-  /* ── Render ──────────────────────────────────────────────── */
+  /* ── Render ───────────────────────────────────────────────── */
   return (
-    <div className="space-y-5">
-      {/* ── Page heading ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28 }}
-        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm"
+    <div
+      className="relative rounded-3xl overflow-hidden"
+      style={{
+        background: "linear-gradient(160deg, #030711 0%, #0a1628 55%, #071a14 100%)",
+      }}
+    >
+      {/* Grain texture overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.035] pointer-events-none mix-blend-overlay"
         style={{
           backgroundImage:
-            "radial-gradient(60% 80% at 90% 0%, rgba(16,185,129,.07), transparent 60%)," +
-            "radial-gradient(40% 60% at 5% 100%, rgba(14,165,233,.06), transparent 65%)",
+            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
         }}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider">
-              <Sparkles size={12} strokeWidth={2.5} />
-              Eğitmen Keşfet
-            </div>
-            <h2 className="mt-2.5 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-              Sana en uygun{" "}
-              <span className="italic font-semibold text-emerald-700">eğitmeni</span> bul.
-            </h2>
-            <p className="mt-1.5 text-sm text-slate-500 max-w-lg">
-              Doğrulanmış eğitmenler arasından bütçe ve şehir filtreleriyle saniyeler içinde
-              keşfet.
-            </p>
-          </div>
-          {faves.size > 0 && (
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-600">
-              <Heart size={14} strokeWidth={2.4} className="text-rose-500" />
-              <span className="text-slate-700">{faves.size} favori</span>
-            </div>
-          )}
+      />
+
+      {/* ── HERO ── */}
+      <div className="relative px-6 pt-10 pb-7">
+        {/* Ambient radial glow */}
+        <div className="absolute inset-x-0 top-0 h-72 pointer-events-none overflow-hidden">
+          <div
+            className="absolute left-1/2 top-4 -translate-x-1/2 w-[600px] h-52 rounded-full opacity-[0.18] blur-[90px]"
+            style={{ background: "radial-gradient(ellipse, #10b981 0%, transparent 70%)" }}
+          />
         </div>
-      </motion.div>
 
-      {/* ── Filter bar ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, delay: 0.06 }}
-        className="bg-white border border-slate-200 rounded-3xl p-3 sm:p-4 shadow-sm"
-      >
-        <form onSubmit={onSubmit}>
-          <div className="flex flex-col lg:flex-row gap-2.5">
-            {/* Text search */}
-            <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-2xl px-4 h-12 flex-[1.5] min-w-0 focus-within:border-emerald-300 focus-within:ring-4 focus-within:ring-emerald-100 transition">
-              <Search size={17} className="text-slate-400 shrink-0" />
-              <input
-                value={queryText}
-                onChange={(e) => setQueryText(e.target.value)}
-                placeholder="Hoca adı, konum veya konu ara..."
-                className="bg-transparent outline-none text-sm flex-1 placeholder:text-slate-400 text-slate-900 min-w-0"
-              />
-              {queryText && (
-                <button
-                  type="button"
-                  onClick={() => setQueryText("")}
-                  className="text-slate-400 hover:text-slate-600 transition"
-                >
-                  <X size={15} />
-                </button>
-              )}
-            </div>
-
-            {/* City input */}
-            <div className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 h-12 flex-1 min-w-[140px] hover:border-slate-300 focus-within:border-emerald-300 focus-within:ring-4 focus-within:ring-emerald-100 transition">
-              <MapPin size={17} className="text-slate-400 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] uppercase tracking-[0.14em] font-bold text-slate-400 -mb-0.5">
-                  Şehir
-                </div>
-                <input
-                  value={sehir}
-                  onChange={(e) => setSehir(e.target.value)}
-                  placeholder="örn. İstanbul"
-                  className="bg-transparent outline-none text-sm w-full placeholder:text-slate-400 text-slate-800"
-                />
-              </div>
-            </div>
-
-            {/* Budget dropdown */}
-            <FilterSelect
-              icon={SlidersHorizontal}
-              label="Bütçe"
-              value={budgetFilter}
-              options={BUDGETS}
-              onChange={setBudgetFilter}
-              valueLabel={BUDGETS.find((b) => b.id === budgetFilter)?.label}
-            />
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="h-12 px-6 text-white text-sm font-bold rounded-2xl shadow-[0_8px_24px_-8px_rgba(16,185,129,.4)] inline-flex items-center justify-center gap-2 transition hover:-translate-y-px hover:shadow-[0_12px_28px_-8px_rgba(16,185,129,.5)] disabled:opacity-60 disabled:translate-y-0"
-              style={{ background: "linear-gradient(180deg, #10b981 0%, #059669 100%)" }}
-            >
-              <Search size={16} strokeWidth={2.5} />
-              {loading ? "Aranıyor..." : "Eğitmen Bul"}
-            </button>
+        {/* Badge + Heading */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="relative text-center max-w-2xl mx-auto"
+        >
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-emerald-400 mb-5">
+            <ISparkles size={12} sw={2.5} />
+            Eğitmen Keşfet
           </div>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-[1.1]">
+            Sana en uygun{" "}
+            <span
+              className="text-transparent bg-clip-text"
+              style={{
+                backgroundImage: "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
+              }}
+            >
+              eğitmeni
+            </span>{" "}
+            bul.
+          </h2>
+          <p className="mt-3 text-sm text-white/35 max-w-md mx-auto">
+            Doğrulanmış eğitmenler arasından uzmanlık alanı veya isme göre saniyeler içinde keşfet.
+          </p>
+        </motion.div>
 
-          {/* Active filters summary */}
-          {(sehir || queryText || budgetFilter !== "all") && (
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] uppercase tracking-[0.14em] font-bold text-slate-400">
-                Aktif:
-              </span>
-              {queryText && (
-                <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  &ldquo;{queryText}&rdquo;
-                  <button type="button" onClick={() => setQueryText("")}>
-                    <X size={11} />
-                  </button>
-                </span>
-              )}
-              {sehir && (
-                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  <MapPin size={11} />
-                  {sehir}
-                  <button type="button" onClick={() => { setSehir(""); fetchHocalar("", ilce); }}>
-                    <X size={11} />
-                  </button>
-                </span>
-              )}
-              {budgetFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  <SlidersHorizontal size={11} />
-                  {BUDGETS.find((b) => b.id === budgetFilter)?.label}
-                  <button type="button" onClick={() => setBudgetFilter("all")}>
-                    <X size={11} />
-                  </button>
-                </span>
-              )}
+        {/* Search bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="relative mt-7 max-w-2xl mx-auto"
+        >
+          {/* Glow halo behind input */}
+          <div
+            className="absolute inset-0 rounded-2xl opacity-0 focus-within:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{
+              filter: "blur(28px)",
+              background:
+                "radial-gradient(ellipse at 50% 120%, rgba(16,185,129,0.28), transparent 70%)",
+            }}
+          />
+          <form
+            onSubmit={onSubmit}
+            className="relative flex items-center gap-3 rounded-2xl border border-white/[0.1] bg-white/[0.06] backdrop-blur-xl px-5 h-14 focus-within:border-emerald-400/40 focus-within:shadow-[0_0_0_3px_rgba(52,211,153,0.10)] transition-all duration-300"
+          >
+            <ISearch size={18} sw={2} className="text-white/30 shrink-0" />
+            <input
+              value={queryText}
+              onChange={(e) => {
+                setQueryText(e.target.value);
+                setSehir(e.target.value);
+              }}
+              placeholder="İsim, uzmanlık alanı veya şehir ara..."
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm text-white placeholder:text-white/25"
+            />
+            {queryText && (
               <button
                 type="button"
-                onClick={temizle}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-800 inline-flex items-center gap-1 ml-auto transition"
+                onClick={() => {
+                  setQueryText("");
+                  setSehir("");
+                }}
+                className="text-white/25 hover:text-white/55 transition-colors shrink-0"
               >
-                <X size={12} />
-                Tümünü temizle
+                <IX size={15} sw={2} />
               </button>
-            </div>
-          )}
-        </form>
-      </motion.div>
-
-      {/* ── Results header ── */}
-      {searched && !loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex items-center justify-between gap-3"
-        >
-          <div className="text-sm text-slate-600">
-            <span className="font-extrabold text-slate-900">{filteredHocalar.length}</span> sonuç
-            {sehir && (
-              <>
-                {" "}
-                ·{" "}
-                <span className="font-semibold">{sehir}</span>
-              </>
             )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline text-xs uppercase tracking-wider font-bold text-slate-400">
-              Sırala
-            </span>
-            <SortMenu value={sortBy} onChange={setSortBy} />
-          </div>
+            <div className="h-6 w-px bg-white/[0.08] shrink-0" />
+            <BudgetDropdown value={budgetFilter} onChange={setBudgetFilter} />
+          </form>
         </motion.div>
-      )}
 
-      {/* ── Grid ── */}
-      <div className="min-h-[200px]">
+        {/* Subject pill filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-4 flex items-center gap-1.5 flex-wrap justify-center"
+        >
+          {SUBJECTS.map((s) => {
+            const isActive = subjectFilter === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => onSubjectClick(s.id)}
+                className="relative px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-150"
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="subject-pill-active"
+                    className="absolute inset-0 rounded-full border border-emerald-400/40 bg-emerald-500/15"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span
+                  className={`relative transition-colors duration-150 ${
+                    isActive
+                      ? "text-emerald-300"
+                      : "text-white/35 hover:text-white/65"
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </button>
+            );
+          })}
+        </motion.div>
+      </div>
+
+      {/* Thin divider */}
+      <div className="mx-6 h-px bg-white/[0.05]" />
+
+      {/* Results bar */}
+      <AnimatePresence>
+        {!loading && searched && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-between gap-3 px-6 py-3.5"
+          >
+            <div className="text-sm text-white/35">
+              <span className="font-black text-white/65">{filteredHocalar.length}</span>{" "}
+              eğitmen
+              {sehir && (
+                <span>
+                  {" "}
+                  ·{" "}
+                  <span className="font-semibold text-white/50">{sehir}</span>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5">
+              {faves.size > 0 && (
+                <span className="text-xs text-white/30 flex items-center gap-1 border border-white/[0.06] rounded-lg px-2.5 py-1">
+                  <IHeart size={11} sw={2} className="text-rose-400" />
+                  {faves.size} favori
+                </span>
+              )}
+              <SortMenu value={sortBy} onChange={setSortBy} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Card grid */}
+      <div className="px-6 pb-8 pt-1">
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
-              key="loading"
+              key="skel"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1025,7 +1090,15 @@ export default function OgretmenBul({ currentUserId }: Props) {
               ))}
             </motion.div>
           ) : filteredHocalar.length === 0 && searched ? (
-            <EmptyState key="empty" onClear={temizle} />
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1"
+            >
+              <EmptyState onClear={temizle} />
+            </motion.div>
           ) : (
             <motion.div
               key="grid"
@@ -1053,7 +1126,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* ── Modals (existing) ── */}
+      {/* ── Modals (unchanged) ── */}
       <HocayiDegerlendirModal
         open={!!reviewTarget}
         onClose={() => setReviewTarget(null)}
@@ -1062,20 +1135,22 @@ export default function OgretmenBul({ currentUserId }: Props) {
         ogrenciId={currentUserId}
         onSaved={handleReviewSaved}
       />
-
       <VideoPlayer
         open={!!videoTarget}
         onClose={() => setVideoTarget(null)}
         url={videoTarget?.video_url ?? null}
-        title={videoTarget?.full_name ? `${videoTarget.full_name} — Tanıtım` : undefined}
+        title={
+          videoTarget?.full_name ? `${videoTarget.full_name} — Tanıtım` : undefined
+        }
       />
-
       <RezervasyonMatrisi
         open={!!rezervasyonTarget}
         onClose={() => setRezervasyonTarget(null)}
         hoca={rezervasyonTarget}
         currentUserId={currentUserId}
-        rating={rezervasyonTarget ? ratings.get(rezervasyonTarget.id) : undefined}
+        rating={
+          rezervasyonTarget ? ratings.get(rezervasyonTarget.id) : undefined
+        }
       />
     </div>
   );

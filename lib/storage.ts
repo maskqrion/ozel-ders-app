@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "./supabase/client";
 
 const BUCKET = "kaynaklar";
 const DEFAULT_TTL_SECONDS = 60 * 60;

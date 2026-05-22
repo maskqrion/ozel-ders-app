@@ -1,24 +1,122 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ─────────────────────────────────────────────────────────────────────────────
+   ORYZO AI — Design System Tokens
+   Cork coaster in a blackout studio. Warm cream on near-black canvas.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  /* ── Colors ──────────────────────────────────────────────────────────────── */
+  /* bg-studio-black  text-studio-black  border-studio-black  etc. */
+  --color-studio-black:  #100904;
+  /* bg-warm-cream  text-warm-cream  border-warm-cream  etc. */
+  --color-warm-cream:    #ffedd7;
+  /* bg-cork-shadow  border-cork-shadow */
+  --color-cork-shadow:   #40372e;
+  /* bg-dark-cork  (filled pill button surface) */
+  --color-dark-cork:     #382416;
+  /* text-burnt-sienna  border-burnt-sienna  (hairline accent only) */
+  --color-burnt-sienna:  #dc5000;
+  /* text-grey-brown  (muted labels) */
+  --color-grey-brown:    #6c5f51;
+  /* bg-forest-grid  (photographic palette reference) */
+  --color-forest-grid:   #445231;
+
+  /* ── Typography ──────────────────────────────────────────────────────────── */
+  /* font-halyard → font-family: halyard-display-variable, fallbacks */
+  --font-halyard: 'halyard-display-variable', 'Plus Jakarta Sans', 'Figtree',
+                  'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale — generates text-caption through text-display utilities.
+     Format: size / line-height (Tailwind v4 shorthand)                       */
+  --text-caption:    10px / 1.2;
+  --text-body:       14px / 1.33;
+  --text-subheading: 18px / 1.2;
+  --text-heading-sm: 24px / 1.1;
+  --text-heading:    29px / 1.09;
+  --text-heading-lg: 41px / 1;
+  --text-display:    51px / 0.9;
+
+  /* ── Border Radii ────────────────────────────────────────────────────────── */
+  /* rounded-card (12px · cards & thumbnails)                                  */
+  --radius-card: 12px;
+  /* rounded-pill (36px · filled pill buttons)                                 */
+  --radius-pill: 36px;
+  /* rounded-btn (22.5px · ghost outlined pill buttons)                        */
+  --radius-btn:  22.5px;
 }
 
+/* Existing bg/fg colour utilities — wired to :root variables so a future
+   light-mode override only needs to touch :root, not Tailwind internals.      */
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-jakarta);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground:  var(--foreground);
+  --font-sans:         var(--font-jakarta);
+  --font-mono:         var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Raw CSS Custom Properties (always available via var()) ─────────────── */
+:root {
+  /* Default canvas: Studio Black — near-black with faint warm-brown undertone */
+  --background: #100904;
+  --foreground:  #ffedd7;
+
+  /* Mirror all color tokens here so they work in arbitrary inline styles too  */
+  --color-studio-black:  #100904;
+  --color-warm-cream:    #ffedd7;
+  --color-cork-shadow:   #40372e;
+  --color-dark-cork:     #382416;
+  --color-burnt-sienna:  #dc5000;
+  --color-grey-brown:    #6c5f51;
+  --color-forest-grid:   #445231;
+
+  /* Surface stack (two levels + cream edge)                                   */
+  --surface-canvas:       #100904;
+  --surface-raised-cork:  #382416;
+  --surface-cream-edge:   #ffedd7;
+
+  /* Spacing scale — kept in :root only to preserve Tailwind's default scale   */
+  --spacing-6:   6px;
+  --spacing-8:   8px;
+  --spacing-9:   9px;
+  --spacing-10:  10px;
+  --spacing-12:  12px;
+  --spacing-14:  14px;
+  --spacing-18:  18px;
+  --spacing-24:  24px;
+  --spacing-31:  31px;
+  --spacing-41:  41px;
+  --spacing-45:  45px;
+  --spacing-68:  68px;
+  --spacing-204: 204px;
+
+  /* Named border radii                                                         */
+  --radius-cards:           12px;
+  --radius-inputs:          0px;
+  --radius-buttons-flat:    0px;
+  --radius-buttons-pill:    36px;
+  --radius-buttons-rounded: 22.5px;
+
+  /* Semantic layout constants                                                  */
+  --section-gap:   80px;
+  --card-padding:  24px;
+  --element-gap:   18px;
+
+  /* Typographic weights                                                        */
+  --font-weight-regular: 400;
+  --font-weight-medium:  500;
+
+  /* Leading scale (raw — also embedded in text-* tokens above)                */
+  --leading-caption:     1.2;
+  --leading-body:        1.33;
+  --leading-subheading:  1.2;
+  --leading-heading-sm:  1.1;
+  --leading-heading:     1.09;
+  --leading-heading-lg:  1;
+  --leading-display:     0.9;
 }
 
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 body {
   background: var(--background);
   color: var(--foreground);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { attachSignedUrls } from "@/lib/storage";
 import type { UserProfile, Lesson, Assignment, Resource } from "@/lib/types";
 

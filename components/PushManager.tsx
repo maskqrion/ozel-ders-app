@@ -8,7 +8,7 @@ import {
   type PushNotificationSchema,
   type ActionPerformed,
 } from "@capacitor/push-notifications";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 export default function PushManager() {
   useEffect(() => {

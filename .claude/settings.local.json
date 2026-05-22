@@ -21,7 +21,13 @@
       "Bash(npx next *)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"BASELINE_EXIT=$?\")",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version','?'\\), d.get\\('main','?'\\), d.get\\('exports',{}\\).keys\\(\\)\\)\")",
+      "Bash(xargs grep -l \"middleware\\\\|cookies\\\\|NextResponse\")",
+      "Bash(xargs grep -l \"proxy\\\\|middleware\")",
+      "Bash(xargs grep -l \"Mesajlar\\\\|mesaj\\\\|notification\")",
+      "Bash(curl -s http://localhost:3000/sandbox -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s \"http://localhost:3000/sandbox\")"
     ]
   }
 }

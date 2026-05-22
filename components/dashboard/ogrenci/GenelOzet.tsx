@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import type { Assignment, Lesson } from "@/lib/types";
 import { XP_PER_LEVEL } from "@/components/dashboard/shared/LevelProgressBar";
 

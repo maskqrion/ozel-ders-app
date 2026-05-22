@@ -3,10 +3,35 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 type Role = "ogrenci" | "hoca";
+
+/* ============================================================
+   AUTH HATA HARİTALAMA
+   ============================================================ */
+const AUTH_ERROR_MAP: [string, string][] = [
+  ["Invalid login credentials",                         "E-posta veya şifre hatalı."],
+  ["User already registered",                           "Bu e-posta adresi zaten kayıtlı."],
+  ["Email not confirmed",                               "E-posta adresiniz henüz doğrulanmamış. Gelen kutunuzu kontrol edin."],
+  ["Password should be at least 6 characters",         "Şifre en az 6 karakter olmalıdır."],
+  ["Unable to validate email address: invalid format",  "Geçersiz e-posta formatı."],
+  ["Email rate limit exceeded",                         "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin."],
+  ["For security purposes, you can only request this",  "Güvenlik nedeniyle lütfen kısa bir süre bekleyin."],
+  ["over_email_send_rate_limit",                        "Çok fazla e-posta isteği gönderildi. Lütfen bekleyin."],
+  ["Auth session missing",                              "Oturum bulunamadı. Lütfen tekrar giriş yapın."],
+  ["signup_disabled",                                   "Kayıt sistemi şu an aktif değil."],
+  ["New password should be different from the old",     "Yeni şifre eski şifrenizden farklı olmalıdır."],
+  ["Anonymous sign-ins are disabled",                   "Anonim giriş desteklenmiyor."],
+];
+
+function mapAuthError(message: string): string {
+  for (const [key, tr] of AUTH_ERROR_MAP) {
+    if (message.includes(key)) return tr;
+  }
+  return "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.";
+}
 
 /* ============================================================
    INLINE ICONS
@@ -203,6 +228,64 @@ function FloatingBadge({
 }
 
 /* ============================================================
+   AURORA ARKA PLAN
+   ============================================================ */
+function AuroraBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      {/* Blob 1 – Emerald, sağ-üst */}
+      <motion.div
+        style={{
+          position: "absolute",
+          width: "72%",
+          height: "72%",
+          top: "-18%",
+          right: "-8%",
+          borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse at center, rgba(16,185,129,0.26) 0%, rgba(16,185,129,0.10) 42%, transparent 70%)",
+          filter: "blur(40px)",
+        }}
+        animate={{ x: [0, 28, -18, 0], y: [0, -22, 14, 0], scale: [1, 1.10, 0.97, 1] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      />
+      {/* Blob 2 – Sky, sol-alt */}
+      <motion.div
+        style={{
+          position: "absolute",
+          width: "62%",
+          height: "62%",
+          bottom: "-12%",
+          left: "-14%",
+          borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse at center, rgba(14,165,233,0.20) 0%, rgba(14,165,233,0.07) 42%, transparent 70%)",
+          filter: "blur(36px)",
+        }}
+        animate={{ x: [0, -22, 16, 0], y: [0, 18, -10, 0], scale: [1, 1.07, 0.95, 1] }}
+        transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 4 }}
+      />
+      {/* Blob 3 – Violet, merkez */}
+      <motion.div
+        style={{
+          position: "absolute",
+          width: "48%",
+          height: "48%",
+          top: "32%",
+          left: "24%",
+          borderRadius: "50%",
+          background:
+            "radial-gradient(ellipse at center, rgba(139,92,246,0.13) 0%, rgba(139,92,246,0.04) 40%, transparent 70%)",
+          filter: "blur(32px)",
+        }}
+        animate={{ x: [0, 18, -14, 0], y: [0, -16, 20, 0], scale: [1, 1.14, 0.93, 1] }}
+        transition={{ duration: 30, repeat: Infinity, ease: "easeInOut", delay: 9 }}
+      />
+    </div>
+  );
+}
+
+/* ============================================================
    LEFT PANEL
    ============================================================ */
 function LeftPanel({ isLogin }: { isLogin: boolean }) {
@@ -215,16 +298,14 @@ function LeftPanel({ isLogin }: { isLogin: boolean }) {
   return (
     <div
       className="relative h-full overflow-hidden flex flex-col"
-      style={{
-        background:
-          "radial-gradient(70% 60% at 80% 10%, rgba(16,185,129,.12), transparent 60%)," +
-          "radial-gradient(50% 50% at 5% 85%, rgba(14,165,233,.10), transparent 60%)," +
-          "linear-gradient(160deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%)",
-      }}
+      style={{ background: "linear-gradient(160deg, #f0fdf4 0%, #f8fafc 50%, #f0f9ff 100%)" }}
     >
+      {/* Aurora animasyonlu gradyan blob'lar */}
+      <AuroraBackground />
+
       {/* Subtle grid */}
       <div
-        className="absolute inset-0 opacity-40 pointer-events-none"
+        className="absolute inset-0 opacity-30 pointer-events-none"
         aria-hidden="true"
         style={{
           backgroundImage:
@@ -433,10 +514,10 @@ function Field({
         {label}
       </label>
       <div
-        className={`flex items-center gap-2.5 bg-white border rounded-xl px-3.5 py-3 transition-shadow ${
+        className={`flex items-center gap-2.5 bg-white border rounded-xl px-3.5 py-3 transition-[border-color,box-shadow] duration-200 ${
           error
-            ? "border-rose-300 ring-2 ring-rose-100"
-            : "border-slate-200 hover:border-slate-300 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/15"
+            ? "border-rose-300 shadow-[0_0_0_3px_rgba(239,68,68,.10)]"
+            : "border-slate-200 hover:border-slate-300 focus-within:border-emerald-400 focus-within:shadow-[0_0_0_3px_rgba(16,185,129,.12),0_0_20px_rgba(16,185,129,.16)]"
         }`}
       >
         {Icon && <Icon size={17} className="text-slate-400 shrink-0" />}
@@ -558,22 +639,17 @@ export default function LoginPage() {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              role: role,
+              full_name: name.trim() || null,
+            },
+          },
         });
 
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          const { error: insertError } = await supabase.from("users").insert([
-            {
-              id: data.user.id,
-              email: email,
-              role: role,
-              full_name: name.trim() || null,
-            },
-          ]);
-
-          if (insertError) throw insertError;
-
           setSuccess("Kayıt başarılı! Şimdi giriş yapabilirsin.");
           setIsLogin(true);
           setPassword("");
@@ -581,7 +657,8 @@ export default function LoginPage() {
         }
       }
     } catch (err: unknown) {
-      setError((err as { message?: string }).message || "Bir hata oluştu");
+      const raw = (err as { message?: string }).message ?? "";
+      setError(mapAuthError(raw));
     } finally {
       setLoading(false);
     }
