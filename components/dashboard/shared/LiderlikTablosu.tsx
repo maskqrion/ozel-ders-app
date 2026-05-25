@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createBrowser } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { XP_PER_LEVEL } from './LevelProgressBar';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
@@ -216,7 +216,7 @@ export default function LiderlikTablosu() {
 
   // Fetch current user ID once
   useEffect(() => {
-    createBrowser().auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setCurrentId(user.id);
     });
   }, []);
@@ -229,8 +229,7 @@ export default function LiderlikTablosu() {
 
     (async () => {
       try {
-        const sb = createBrowser();
-        let q = sb
+        let q = supabase
           .from('users')
           .select('id, full_name, xp, level, role')
           .order('xp', { ascending: false, nullsFirst: false })

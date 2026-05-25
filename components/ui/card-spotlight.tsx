@@ -20,8 +20,13 @@ interface CardSpotlightProps {
   children: React.ReactNode;
   className?: string;
   radius?: number;
-  /** Spotlight color — defaults to a hairline burnt-sienna wash */
   color?: string;
+  /** Card background color — defaults to dark studio-black */
+  bg?: string;
+  /** Resting border color */
+  borderColor?: string;
+  /** Hover border color */
+  hoverBorderColor?: string;
 }
 
 export function CardSpotlight({
@@ -29,6 +34,9 @@ export function CardSpotlight({
   className,
   radius = 340,
   color = "rgba(220, 80, 0, 0.13)",
+  bg = "#100904",
+  borderColor = "#40372e",
+  hoverBorderColor = "rgba(220,80,0,0.22)",
 }: CardSpotlightProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -68,10 +76,10 @@ export function CardSpotlight({
       onMouseMove={onMouseMove}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className={cn("group relative overflow-hidden rounded-cards", className)}
+      className={cn("group relative overflow-hidden rounded-card", className)}
       style={{
-        background: "#100904",
-        border: `1px solid ${isHovering ? "rgba(220,80,0,0.22)" : "#40372e"}`,
+        background: bg,
+        border: `1px solid ${isHovering ? hoverBorderColor : borderColor}`,
         transition: "border-color 0.25s ease",
       }}
     >

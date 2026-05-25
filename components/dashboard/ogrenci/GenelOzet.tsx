@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import type { Assignment, Lesson } from "@/lib/types";
-import { XP_PER_LEVEL } from "@/components/dashboard/shared/LevelProgressBar";
+import { XP_PER_LEVEL } from "@/lib/constants";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { GooeyInput } from "@/components/ui/gooey-input";
 
 /* ============================================================
    ICON PRIMITIVES  (lucide-react yüklü değil — inline SVG)
@@ -114,14 +116,10 @@ const BookOpen = (p: IconProps) => (
    PROPS
    ============================================================ */
 type Props = {
-  userId: string;
   siradakiDers: Lesson | null;
   odevler: Assignment[];
-  level: number;
-  xp: number;
   refetchDersler: () => void | Promise<void>;
   refetchOdevler: () => void | Promise<void>;
-  fullName?: string;
   dersler?: Lesson[];
 };
 
@@ -188,16 +186,17 @@ const STATUS_CFG: Record<
    MAIN COMPONENT
    ============================================================ */
 export default function GenelOzet({
-  userId,
   siradakiDers,
   odevler,
-  level,
-  xp,
   refetchDersler,
   refetchOdevler,
-  fullName,
   dersler = [],
 }: Props) {
+  const { data: profile } = useProfile();
+  const userId = profile?.id ?? "";
+  const level = profile?.level ?? 1;
+  const xp = profile?.xp ?? 0;
+  const firstName = profile?.full_name?.split(" ")[0] ?? "Öğrenci";
   /* ── Preserved invite state ── */
   const [inviteLink, setInviteLink] = useState("");
   const [connecting, setConnecting] = useState(false);
@@ -253,11 +252,10 @@ export default function GenelOzet({
     (o) => o.status === "verildi" || o.status === "reddedildi",
   ).length;
 
-  /* ── XP calculations (wired to real props) ── */
+  /* ── XP calculations ── */
   const xpInLevel = xp % XP_PER_LEVEL;
   const xpPct = Math.round((xpInLevel / XP_PER_LEVEL) * 100);
   const xpRemaining = XP_PER_LEVEL - xpInLevel;
-  const firstName = fullName?.split(" ")[0] ?? "Öğrenci";
 
   /* ── Upcoming lessons — dersler from prop, fallback to siradakiDers ── */
   const upcomingDersler = useMemo(() => {
@@ -733,20 +731,20 @@ export default function GenelOzet({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="text"
-            placeholder="https://.../davet?token=... veya token"
-            value={inviteLink}
-            onChange={(e) => setInviteLink(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAcceptInvite();
-            }}
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 focus:bg-white"
-          />
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleAcceptInvite(); }}
+          className="flex flex-col gap-2 sm:flex-row sm:items-center"
+        >
+          <div className="flex-1">
+            <GooeyInput
+              value={inviteLink}
+              onChange={setInviteLink}
+              placeholder="https://.../davet?token=... veya token"
+              type="text"
+            />
+          </div>
           <button
-            type="button"
-            onClick={handleAcceptInvite}
+            type="submit"
             disabled={connecting || !inviteLink.trim()}
             className="whitespace-nowrap inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60"
             style={{
@@ -758,7 +756,7 @@ export default function GenelOzet({
             {connecting ? "Bağlanıyor..." : "Bağlan"}
             {!connecting && <ArrowRight size={14} strokeWidth={2.5} />}
           </button>
-        </div>
+        </form>
       </motion.div>
     </div>
   );

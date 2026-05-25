@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ImagesBadge } from "@/components/ui/images-badge";
 
 type Props = {
   ogrenciAdi: string;
@@ -36,9 +37,16 @@ export default function QuizSuggestionBanner({ ogrenciAdi, count, onCreate, onDi
 
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-            🎉 Yeni Kilometre Taşı
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+              🎉 Yeni Kilometre Taşı
+            </p>
+            <ImagesBadge
+              text={`${count} Ödev`}
+              images={[]}
+              className="border-emerald-400/40 bg-emerald-500/80"
+            />
+          </div>
           <p className="mt-1 text-base font-semibold text-slate-800">
             {ogrenciAdi} {count} ödevi tamamladı!
           </p>

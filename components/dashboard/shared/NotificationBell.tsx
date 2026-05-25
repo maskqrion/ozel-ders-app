@@ -148,7 +148,7 @@ export default function NotificationBell({ userId }: Props) {
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
-      .channel(`notifications-${userId}`)
+      .channel(`notifications-${userId}-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

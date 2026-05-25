@@ -3,35 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
 import { useRouter } from "next/navigation";
 
 type Role = "ogrenci" | "hoca";
 
-/* ============================================================
-   AUTH HATA HARİTALAMA
-   ============================================================ */
-const AUTH_ERROR_MAP: [string, string][] = [
-  ["Invalid login credentials",                         "E-posta veya şifre hatalı."],
-  ["User already registered",                           "Bu e-posta adresi zaten kayıtlı."],
-  ["Email not confirmed",                               "E-posta adresiniz henüz doğrulanmamış. Gelen kutunuzu kontrol edin."],
-  ["Password should be at least 6 characters",         "Şifre en az 6 karakter olmalıdır."],
-  ["Unable to validate email address: invalid format",  "Geçersiz e-posta formatı."],
-  ["Email rate limit exceeded",                         "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin."],
-  ["For security purposes, you can only request this",  "Güvenlik nedeniyle lütfen kısa bir süre bekleyin."],
-  ["over_email_send_rate_limit",                        "Çok fazla e-posta isteği gönderildi. Lütfen bekleyin."],
-  ["Auth session missing",                              "Oturum bulunamadı. Lütfen tekrar giriş yapın."],
-  ["signup_disabled",                                   "Kayıt sistemi şu an aktif değil."],
-  ["New password should be different from the old",     "Yeni şifre eski şifrenizden farklı olmalıdır."],
-  ["Anonymous sign-ins are disabled",                   "Anonim giriş desteklenmiyor."],
-];
-
-function mapAuthError(message: string): string {
-  for (const [key, tr] of AUTH_ERROR_MAP) {
-    if (message.includes(key)) return tr;
-  }
-  return "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.";
-}
 
 /* ============================================================
    INLINE ICONS
@@ -484,8 +465,9 @@ type FieldProps = {
   id: string;
   icon?: (p: IconProps) => React.JSX.Element;
   type?: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  registration?: Record<string, unknown>;
   placeholder?: string;
   error?: string;
   hint?: string;
@@ -501,6 +483,7 @@ function Field({
   type = "text",
   value,
   onChange,
+  registration,
   placeholder,
   error,
   hint,
@@ -522,10 +505,10 @@ function Field({
       >
         {Icon && <Icon size={17} className="text-slate-400 shrink-0" />}
         <input
+          {...(registration as React.InputHTMLAttributes<HTMLInputElement>)}
           id={id}
           type={type}
-          value={value}
-          onChange={onChange}
+          {...(!registration && { value, onChange })}
           placeholder={placeholder}
           autoComplete={autoComplete}
           required={required}
@@ -534,7 +517,7 @@ function Field({
         {right}
       </div>
       {error ? (
-        <div className="mt-1.5 text-[12px] text-rose-600 font-medium">{error}</div>
+        <p className="mt-1 text-red-500 text-sm">{error}</p>
       ) : hint ? (
         <div className="mt-1.5 text-[12px] text-slate-500">{hint}</div>
       ) : null}
@@ -583,14 +566,17 @@ function Tabs({
    PAGE
    ============================================================ */
 export default function LoginPage() {
+  /* --- form --- */
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+
   /* --- existing auth state --- */
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState<Role>("ogrenci");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   /* --- new UI state --- */
   const [showPw, setShowPw] = useState(false);
@@ -602,17 +588,10 @@ export default function LoginPage() {
 
   const switchMode = (next: boolean) => {
     setIsLogin(next);
-    setError("");
-    setSuccess("");
   };
 
-  /* --- existing Supabase auth logic (unchanged) --- */
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
+  /* --- Supabase auth logic --- */
+  const handleAuth = async ({ email, password }: LoginFormValues) => {
     try {
       if (isLogin) {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -629,6 +608,8 @@ export default function LoginPage() {
           .single();
 
         if (userError) throw userError;
+
+        toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
 
         if (userData.role === "hoca") {
           router.push("/hoca");
@@ -650,23 +631,18 @@ export default function LoginPage() {
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          setSuccess("Kayıt başarılı! Şimdi giriş yapabilirsin.");
+          toast.success("Kayıt başarılı! Şimdi giriş yapabilirsin.");
           setIsLogin(true);
-          setPassword("");
+          reset();
           setName("");
         }
       }
     } catch (err: unknown) {
-      const raw = (err as { message?: string }).message ?? "";
-      setError(mapAuthError(raw));
-    } finally {
-      setLoading(false);
+      toast.error(getErrorMessage(err));
     }
   };
 
-  const canSubmit = isLogin
-    ? !!email && !!password
-    : !!name.trim() && !!email && !!password && accept;
+  const canSubmit = isLogin ? !isSubmitting : !!name.trim() && accept && !isSubmitting;
 
   /* ------------------------------------------------------------------ */
   return (
@@ -731,7 +707,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="mt-7 w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition"
-                  onClick={() => setError("Google ile giriş yakında aktif olacak.")}
+                  onClick={() => toast("Google ile giriş yakında aktif olacak.", { icon: "🔜" })}
                 >
                   <GoogleIcon size={18} />
                   Google ile {isLogin ? "giriş yap" : "devam et"}
@@ -744,36 +720,8 @@ export default function LoginPage() {
                   <span className="flex-1 h-px bg-slate-200" />
                 </div>
 
-                {/* Alerts */}
-                <AnimatePresence>
-                  {error && (
-                    <motion.div
-                      key="error"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      role="alert"
-                      className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
-                    >
-                      {error}
-                    </motion.div>
-                  )}
-                  {success && (
-                    <motion.div
-                      key="success"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      role="status"
-                      className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-                    >
-                      {success}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 {/* Form */}
-                <form onSubmit={handleAuth} className="space-y-4">
+                <form onSubmit={handleSubmit(handleAuth)} className="space-y-4">
                   {/* Name — signup only */}
                   {!isLogin && (
                     <Field
@@ -793,11 +741,10 @@ export default function LoginPage() {
                     label="E-posta"
                     icon={Mail}
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    registration={register("email")}
                     placeholder="seninadin@email.com"
                     autoComplete="email"
-                    required
+                    error={errors.email?.message}
                   />
 
                   <Field
@@ -805,12 +752,10 @@ export default function LoginPage() {
                     label={isLogin ? "Şifre" : "Şifre oluştur"}
                     icon={Lock}
                     type={showPw ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    registration={register("password")}
                     placeholder={isLogin ? "••••••••" : "En az 6 karakter"}
                     autoComplete={isLogin ? "current-password" : "new-password"}
-                    hint={!isLogin && password.length > 0 && password.length < 6 ? "En az 6 karakter gerekli." : undefined}
-                    required
+                    error={errors.password?.message}
                     right={
                       <button
                         type="button"
@@ -920,20 +865,20 @@ export default function LoginPage() {
                   {/* Submit */}
                   <motion.button
                     type="submit"
-                    disabled={!canSubmit || loading}
-                    whileTap={canSubmit && !loading ? { scale: 0.98 } : {}}
+                    disabled={!canSubmit}
+                    whileTap={canSubmit ? { scale: 0.98 } : {}}
                     className={`w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 text-base font-bold text-white rounded-xl transition ${
-                      canSubmit && !loading
+                      canSubmit
                         ? "shadow-[0_8px_24px_-8px_rgba(16,185,129,.5)] hover:-translate-y-px hover:shadow-[0_12px_28px_-8px_rgba(16,185,129,.55)]"
                         : "cursor-not-allowed opacity-60"
                     }`}
                     style={
-                      canSubmit && !loading
+                      canSubmit
                         ? { background: "linear-gradient(180deg, #10b981 0%, #059669 100%)" }
                         : { background: "#cbd5e1", color: "#94a3b8" }
                     }
                   >
-                    {loading ? (
+                    {isSubmitting ? (
                       <>
                         <motion.span
                           aria-hidden
@@ -941,12 +886,7 @@ export default function LoginPage() {
                           transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
                           className="inline-block h-4 w-4 rounded-full border-2 border-white/40 border-t-white"
                         />
-                        {isLogin ? "Giriş yapılıyor..." : "Hesap oluşturuluyor..."}
-                      </>
-                    ) : success && isLogin ? (
-                      <>
-                        <Check size={18} strokeWidth={3} />
-                        Giriş başarılı
+                        {isLogin ? "Giriş Yapılıyor..." : "Hesap Oluşturuluyor..."}
                       </>
                     ) : (
                       <>

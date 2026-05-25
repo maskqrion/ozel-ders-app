@@ -1,8 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { XP_PER_LEVEL } from "@/lib/constants";
 
-export const XP_PER_LEVEL = 1000;
+export { XP_PER_LEVEL };
 
 type Accent = "amber" | "emerald";
 
@@ -36,20 +38,27 @@ const accentMap: Record<
 };
 
 export default function LevelProgressBar({
-  level,
-  xp,
   accent = "amber",
   title,
   compact = false,
 }: {
-  level: number;
-  xp: number;
   accent?: Accent;
   title?: string;
   compact?: boolean;
 }) {
-  const safeLevel = Math.max(1, level || 1);
-  const safeXp = Math.max(0, xp || 0);
+  const { data: profile, isLoading } = useProfile();
+
+  if (isLoading) {
+    return (
+      <div className={`rounded-xl border border-slate-200 bg-white ${compact ? "p-4" : "p-5"} shadow-sm`}>
+        <div className="mb-3 h-4 w-1/3 animate-pulse rounded-full bg-slate-200" />
+        <div className="h-3 w-full animate-pulse rounded-full bg-slate-200" />
+      </div>
+    );
+  }
+
+  const safeLevel = Math.max(1, profile?.level || 1);
+  const safeXp = Math.max(0, profile?.xp || 0);
   const xpInLevel = safeXp % XP_PER_LEVEL;
   const remaining = XP_PER_LEVEL - xpInLevel;
   const percent = Math.max(0, Math.min(100, (xpInLevel / XP_PER_LEVEL) * 100));

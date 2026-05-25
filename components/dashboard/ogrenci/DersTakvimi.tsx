@@ -1,20 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { AnimatePresence, motion } from "framer-motion";
 import LessonsCalendar from "@/components/LessonsCalendar";
-import type { Lesson } from "@/lib/types";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { useLessons } from "@/lib/hooks/useLessons";
 
-type Props = {
-  dersler: Lesson[];
-};
-
-export default function DersTakvimi({ dersler }: Props) {
+export default function DersTakvimi() {
+  const { data: profile } = useProfile();
+  const { data: lessons = [], isLoading } = useLessons(profile?.id, profile?.role);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const seciliGunDersleri = useMemo(() => {
     if (!selectedDate) return [];
-    return dersler.filter((d) => {
+    return lessons.filter((d) => {
       const dd = new Date(d.lesson_date);
       return (
         dd.getFullYear() === selectedDate.getFullYear() &&
@@ -22,7 +22,9 @@ export default function DersTakvimi({ dersler }: Props) {
         dd.getDate() === selectedDate.getDate()
       );
     });
-  }, [dersler, selectedDate]);
+  }, [lessons, selectedDate]);
+
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <motion.div
@@ -31,7 +33,7 @@ export default function DersTakvimi({ dersler }: Props) {
       transition={{ duration: 0.25 }}
       className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
     >
-      <LessonsCalendar dersler={dersler} accent="green" value={selectedDate} onChange={setSelectedDate} />
+      <LessonsCalendar dersler={lessons} accent="green" value={selectedDate} onChange={setSelectedDate} />
 
       <div className="mt-4 border-t border-slate-100 pt-4">
         <p className="mb-3 text-xs font-semibold uppercase text-slate-500">

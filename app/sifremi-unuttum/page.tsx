@@ -1,37 +1,33 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/lib/validations/auth";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 export default function SifremiUnuttumPage() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-    try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/sifre-yenile`,
-      });
-      if (resetError) throw resetError;
-      const msg = "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.";
-      setSuccess(msg);
-      toast.success(msg);
-      setEmail("");
-    } catch (err: any) {
-      const msg = err?.message ?? "Bir hata oluştu.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
+  const onSubmit = async (values: ForgotPasswordFormValues) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/sifre-yenile`,
+    });
+    if (error) {
+      toast.error(getErrorMessage(error));
+      return;
     }
+    toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.");
+    reset();
   };
 
   return (
@@ -76,18 +72,7 @@ export default function SifremiUnuttumPage() {
               Hesabınıza bağlı e-posta adresini girin. Sıfırlama bağlantısını göndereceğiz.
             </p>
 
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              {error && (
-                <div role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div role="status" className="rounded-lg border border-emerald-100 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-700">
-                  {success}
-                </div>
-              )}
-
+            <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700">
                   E-posta
@@ -95,21 +80,22 @@ export default function SifremiUnuttumPage() {
                 <input
                   id="email"
                   type="email"
-                  required
                   autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="ornek@eposta.com"
+                  {...register("email")}
                   className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
+                )}
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
+                {isSubmitting ? "Gönderiliyor..." : "Sıfırlama Bağlantısı Gönder"}
               </button>
             </form>
 

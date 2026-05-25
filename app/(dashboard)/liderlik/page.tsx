@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
+import { XP_PER_LEVEL } from "@/lib/constants";
 
 /* ── Types ──────────────────────────────────────────────────── */
 interface LeaderEntry {
@@ -15,9 +16,6 @@ interface LeaderEntry {
   avatar_url: string | null;
   role: "hoca" | "ogrenci";
 }
-
-/* ── Constants ──────────────────────────────────────────────── */
-const XP_PER_LEVEL = 1000;
 
 /* ── Helpers ─────────────────────────────────────────────────  */
 function initials(name: string | null): string {

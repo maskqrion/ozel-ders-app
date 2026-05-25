@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import HocayiDegerlendirModal from "@/components/dashboard/ogrenci/HocayiDegerlendirModal";
 import VideoPlayer from "@/components/dashboard/shared/VideoPlayer";
 import RezervasyonMatrisi from "@/components/dashboard/ogrenci/RezervasyonMatrisi";
+import { ImagesBadge } from "@/components/ui/images-badge";
 
 /* ============================================================
    TYPES
@@ -932,9 +933,20 @@ export default function OgretmenBul({ currentUserId }: Props) {
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="relative text-center max-w-2xl mx-auto"
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-emerald-400 mb-5">
-            <ISparkles size={12} sw={2.5} />
-            Eğitmen Keşfet
+          <div className="mb-5 flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-emerald-400">
+              <ISparkles size={12} sw={2.5} />
+              Eğitmen Keşfet
+            </div>
+            {hocalar.length > 0 && (
+              <ImagesBadge
+                text={`${hocalar.length}+ aktif eğitmen`}
+                images={hocalar
+                  .filter((h) => h.avatar_url)
+                  .slice(0, 4)
+                  .map((h) => h.avatar_url as string)}
+              />
+            )}
           </div>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-[1.1]">
             Sana en uygun{" "}

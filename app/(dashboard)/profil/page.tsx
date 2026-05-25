@@ -4,10 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/types";
 import LevelProgressBar from "@/components/dashboard/shared/LevelProgressBar";
+import { useUploadFile } from "@/lib/hooks/useStorage";
+import { profileUpdateSchema, type ProfileUpdateFormValues } from "@/lib/validations/auth";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 type RoleTheme = {
   back: string;
@@ -47,34 +53,28 @@ function Spinner() {
 
 export default function ProfilSayfasi() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { mutateAsync: uploadFile, isPending: uploading } = useUploadFile();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const [fullName, setFullName] = useState("");
-  const [sehir, setSehir] = useState("");
-  const [ilce, setIlce] = useState("");
-  const [dersFiyati, setDersFiyati] = useState<string>("");
-  const [hakkinda, setHakkinda] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [portfolioUrl, setPortfolioUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const [uploading, setUploading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfileUpdateFormValues>({
+    resolver: zodResolver(profileUpdateSchema),
+  });
+
   useEffect(() => {
     const loadProfile = async () => {
-      const {
-        data: { user: currentUser },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !currentUser) {
-        router.push("/login");
-        return;
-      }
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      if (authError || !currentUser) { router.push("/login"); return; }
       setUser(currentUser);
 
       const { data: profileData } = await supabase
@@ -86,61 +86,47 @@ export default function ProfilSayfasi() {
       if (profileData) {
         const p = profileData as UserProfile;
         setProfile(p);
-        setFullName(p.full_name || "");
-        setSehir(p.sehir || "");
-        setIlce(p.ilce || "");
-        setDersFiyati(p.ders_fiyati != null ? String(p.ders_fiyati) : "");
-        setHakkinda(p.hakkinda || "");
-        setVideoUrl(p.video_url || "");
-        setPortfolioUrl(p.portfolio_url || "");
+        reset({
+          full_name: p.full_name || "",
+          sehir: p.sehir || "",
+          ilce: p.ilce || "",
+          hakkinda: p.hakkinda || "",
+          ders_fiyati: p.ders_fiyati != null ? String(p.ders_fiyati) : "",
+          video_url: p.video_url || "",
+          portfolio_url: p.portfolio_url || "",
+        });
       }
       setLoading(false);
     };
-
     loadProfile();
-  }, [router]);
+  }, [router, reset]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
     try {
-      setUploading(true);
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${user.id}-${Math.random()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from("users")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id);
-      if (updateError) throw updateError;
-
-      setProfile((prev) => (prev ? { ...prev, avatar_url: publicUrl } : null));
+      const path = await uploadFile({ file, folder: `avatarlar/${profile.id}` });
+      const { data } = await supabase.storage.from("kaynaklar").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (!data?.signedUrl) throw new Error("URL alınamadı.");
+      const { error } = await supabase.from("users").update({ avatar_url: data.signedUrl }).eq("id", profile.id);
+      if (error) throw error;
+      setProfile((prev) => prev ? { ...prev, avatar_url: data.signedUrl } : null);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
       toast.success("Profil fotoğrafı güncellendi!");
-    } catch (error: any) {
-      toast.error("Fotoğraf yüklenemedi: " + error.message);
-    } finally {
-      setUploading(false);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   };
 
-  const updateProfile = async (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const onSubmit = async (values: ProfileUpdateFormValues) => {
     if (!profile) return;
 
-    const updates: Record<string, any> = { full_name: fullName.trim() || null };
+    const updates: Record<string, string | number | null> = {
+      full_name: values.full_name?.trim() || null,
+    };
 
     if (profile.role === "hoca") {
-      const trimmed = dersFiyati.trim();
+      const trimmed = (values.ders_fiyati || "").trim();
       let parsedFiyat: number | null = null;
       if (trimmed !== "") {
         const n = Number(trimmed.replace(",", "."));
@@ -150,61 +136,32 @@ export default function ProfilSayfasi() {
         }
         parsedFiyat = n;
       }
-      updates.sehir = sehir.trim() || null;
-      updates.ilce = ilce.trim() || null;
-      updates.hakkinda = hakkinda.trim() || null;
+      updates.sehir = values.sehir?.trim() || null;
+      updates.ilce = values.ilce?.trim() || null;
+      updates.hakkinda = values.hakkinda?.trim() || null;
       updates.ders_fiyati = parsedFiyat;
-
-      const videoTrimmed = videoUrl.trim();
-      const portfolioTrimmed = portfolioUrl.trim();
-
-      const isValidHttpUrl = (raw: string): boolean => {
-        try {
-          const u = new URL(raw);
-          return u.protocol === "http:" || u.protocol === "https:";
-        } catch {
-          return false;
-        }
-      };
-
-      if (videoTrimmed && !isValidHttpUrl(videoTrimmed)) {
-        toast.error("Tanıtım Videosu linki geçerli bir http/https URL'i olmalı.");
-        return;
-      }
-      if (portfolioTrimmed && !isValidHttpUrl(portfolioTrimmed)) {
-        toast.error("Portfolyo linki geçerli bir http/https URL'i olmalı.");
-        return;
-      }
-      updates.video_url = videoTrimmed || null;
-      updates.portfolio_url = portfolioTrimmed || null;
+      updates.video_url = values.video_url?.trim() || null;
+      updates.portfolio_url = values.portfolio_url?.trim() || null;
     }
 
-    setSaving(true);
-    try {
-      const { error } = await supabase.from("users").update(updates).eq("id", profile.id);
-      if (error) throw error;
-      setProfile((prev) => (prev ? ({ ...prev, ...updates } as UserProfile) : null));
-      toast.success("Profil bilgileri kaydedildi.");
-    } catch (error: any) {
-      toast.error("Hata: " + error.message);
-    } finally {
-      setSaving(false);
-    }
+    const { error } = await supabase.from("users").update(updates).eq("id", profile.id);
+    if (error) { toast.error(getErrorMessage(error)); return; }
+
+    setProfile((prev) => prev ? { ...prev, ...updates } as UserProfile : null);
+    queryClient.invalidateQueries({ queryKey: ["profile"] });
+    toast.success("Profil bilgileri kaydedildi.");
   };
 
   const updatePassword = async () => {
-    if (newPassword.length < 6) {
-      toast.error("Şifre en az 6 karakter olmalı.");
-      return;
-    }
+    if (newPassword.length < 6) { toast.error("Şifre en az 6 karakter olmalı."); return; }
     setPwSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       toast.success("Şifreniz başarıyla değiştirildi.");
       setNewPassword("");
-    } catch (error: any) {
-      toast.error("Şifre değiştirilemedi: " + error.message);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setPwSaving(false);
     }
@@ -273,15 +230,10 @@ export default function ProfilSayfasi() {
             </div>
 
             <div className="mb-6">
-              <LevelProgressBar
-                level={profile?.level ?? 1}
-                xp={profile?.xp ?? 0}
-                accent="amber"
-                title="Seviye İlerlemen"
-              />
+              <LevelProgressBar accent="amber" title="Seviye İlerlemen" />
             </div>
 
-            <form onSubmit={updateProfile} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">E-Posta Adresi</label>
@@ -298,11 +250,11 @@ export default function ProfilSayfasi() {
                   <label className="mb-1 block text-sm font-medium text-slate-700">Ad Soyad</label>
                   <input
                     type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
                     placeholder="Adınız Soyadınız"
+                    {...register("full_name")}
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-slate-800 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                   />
+                  {errors.full_name && <p className="mt-1 text-sm text-red-500">{errors.full_name.message}</p>}
                 </div>
               </div>
 
@@ -331,9 +283,8 @@ export default function ProfilSayfasi() {
                           <label className="mb-1 block text-sm font-medium text-slate-700">Şehir (İl)</label>
                           <input
                             type="text"
-                            value={sehir}
-                            onChange={(e) => setSehir(e.target.value)}
                             placeholder="örn. İstanbul"
+                            {...register("sehir")}
                             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                           />
                         </div>
@@ -341,9 +292,8 @@ export default function ProfilSayfasi() {
                           <label className="mb-1 block text-sm font-medium text-slate-700">İlçe</label>
                           <input
                             type="text"
-                            value={ilce}
-                            onChange={(e) => setIlce(e.target.value)}
                             placeholder="örn. Kadıköy"
+                            {...register("ilce")}
                             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                           />
                         </div>
@@ -357,9 +307,8 @@ export default function ProfilSayfasi() {
                               inputMode="decimal"
                               min={0}
                               step="0.01"
-                              value={dersFiyati}
-                              onChange={(e) => setDersFiyati(e.target.value)}
                               placeholder="örn. 350"
+                              {...register("ders_fiyati")}
                               className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 pr-14 text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                             />
                             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-medium text-slate-400">
@@ -376,9 +325,8 @@ export default function ProfilSayfasi() {
                           </label>
                           <textarea
                             rows={5}
-                            value={hakkinda}
-                            onChange={(e) => setHakkinda(e.target.value)}
                             placeholder="Tecrübenizi, eğitim geçmişinizi ve ders yaklaşımınızı kısaca anlatın..."
+                            {...register("hakkinda")}
                             className="w-full resize-y rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                           />
                           <p className="mt-1 text-[10px] text-slate-400">
@@ -407,11 +355,11 @@ export default function ProfilSayfasi() {
                           <input
                             type="url"
                             inputMode="url"
-                            value={videoUrl}
-                            onChange={(e) => setVideoUrl(e.target.value)}
                             placeholder="https://youtu.be/..."
+                            {...register("video_url")}
                             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-sky-500 focus:outline-none focus:ring-4 focus:ring-sky-500/15"
                           />
+                          {errors.video_url && <p className="mt-1 text-sm text-red-500">{errors.video_url.message}</p>}
                           <p className="mt-1 text-[10px] text-slate-400">
                             Kendinizi kısaca tanıttığınız videonun bağlantısı.
                           </p>
@@ -424,11 +372,11 @@ export default function ProfilSayfasi() {
                           <input
                             type="url"
                             inputMode="url"
-                            value={portfolioUrl}
-                            onChange={(e) => setPortfolioUrl(e.target.value)}
                             placeholder="https://..."
+                            {...register("portfolio_url")}
                             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/15"
                           />
+                          {errors.portfolio_url && <p className="mt-1 text-sm text-red-500">{errors.portfolio_url.message}</p>}
                           <p className="mt-1 text-[10px] text-slate-400">
                             LinkedIn, kişisel site veya çevrim içi CV bağlantınız olabilir.
                           </p>
@@ -442,12 +390,12 @@ export default function ProfilSayfasi() {
               <div className="flex justify-end pt-2">
                 <motion.button
                   type="submit"
-                  disabled={saving}
+                  disabled={isSubmitting}
                   whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70"
                 >
-                  {saving && <Spinner />}
-                  {saving ? "Kaydediliyor..." : "Bilgileri Kaydet"}
+                  {isSubmitting && <Spinner />}
+                  {isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet"}
                 </motion.button>
               </div>
             </form>

@@ -2,16 +2,20 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import PushManager from "@/components/PushManager";
+import QueryProvider from "@/components/providers/QueryProvider";
+import AuthProvider from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -50,9 +54,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <PushManager />
-        {children}
-        <Toaster
+        <QueryProvider>
+          <PushManager />
+          <AuthProvider>{children}</AuthProvider>
+          <Toaster
           position="top-right"
           toastOptions={{
             duration: 3500,
@@ -72,7 +77,8 @@ export default function RootLayout({
               duration: 5000,
             },
           }}
-        />
+          />
+        </QueryProvider>
       </body>
     </html>
   );

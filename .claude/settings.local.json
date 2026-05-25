@@ -27,7 +27,11 @@
       "Bash(xargs grep -l \"proxy\\\\|middleware\")",
       "Bash(xargs grep -l \"Mesajlar\\\\|mesaj\\\\|notification\")",
       "Bash(curl -s http://localhost:3000/sandbox -o /dev/null -w \"%{http_code}\")",
-      "Bash(curl -s \"http://localhost:3000/sandbox\")"
+      "Bash(curl -s \"http://localhost:3000/sandbox\")",
+      "Bash(dir /s /b \"C:\\\\ozel-ders-app\\\\app\\\\*.tsx\")",
+      "Bash(findstr \"\\\\[\")",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\ozel-ders-app\\\\.next\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"done\")"
     ]
   }
 }

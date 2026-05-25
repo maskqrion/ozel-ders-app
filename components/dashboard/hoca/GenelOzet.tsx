@@ -1,12 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/lib/supabase/client";
+
+const OdevDurumGrafigi = dynamic(() => import("./OdevDurumGrafigi"), {
+  ssr: false,
+  loading: () => <div className="h-[300px] animate-pulse rounded-xl bg-slate-50" />,
+});
 import type { Assignment, UserProfile } from "@/lib/types";
-import { XP_PER_LEVEL } from "@/components/dashboard/shared/LevelProgressBar";
+import { XP_PER_LEVEL } from "@/lib/constants";
+import { CardSpotlight } from "@/components/ui/card-spotlight";
+import { useProfile } from "@/lib/hooks/useProfile";
 import OgrenciDegerlendirmeleri from "@/components/dashboard/hoca/OgrenciDegerlendirmeleri";
 
 /* ============================================================
@@ -173,6 +180,12 @@ const TONE: Record<Tone, { bg: string; text: string; stroke: string; fill: strin
   },
 };
 
+const SPOTLIGHT: Record<Tone, { color: string; hoverBorder: string }> = {
+  emerald: { color: "rgba(16,185,129,0.08)", hoverBorder: "rgba(16,185,129,0.25)" },
+  sky:     { color: "rgba(14,165,233,0.08)", hoverBorder: "rgba(14,165,233,0.25)" },
+  amber:   { color: "rgba(245,158,11,0.08)", hoverBorder: "rgba(245,158,11,0.25)" },
+};
+
 function StatCard({
   icon: Icon,
   tone,
@@ -191,30 +204,39 @@ function StatCard({
   delay?: number;
 }) {
   const cfg = TONE[tone];
+  const spot = SPOTLIGHT[tone];
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: delay / 1000 }}
-      className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col gap-5"
+      className="shadow-sm"
     >
-      <div
-        className={`h-11 w-11 rounded-2xl ${cfg.bg} ${cfg.text} grid place-items-center`}
+      <CardSpotlight
+        bg="white"
+        color={spot.color}
+        borderColor="#e2e8f0"
+        hoverBorderColor={spot.hoverBorder}
+        className="rounded-3xl p-6 flex flex-col gap-5 h-full"
       >
-        <Icon size={20} strokeWidth={2.1} />
-      </div>
-
-      <div>
-        <div className="text-[12px] uppercase tracking-[0.14em] font-bold text-slate-500">
-          {label}
+        <div
+          className={`h-11 w-11 rounded-2xl ${cfg.bg} ${cfg.text} grid place-items-center`}
+        >
+          <Icon size={20} strokeWidth={2.1} />
         </div>
-        <div className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
-          {value}
-        </div>
-        {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
-      </div>
 
-      <Sparkline data={data} stroke={cfg.stroke} fill={cfg.fill} />
+        <div>
+          <div className="text-[12px] uppercase tracking-[0.14em] font-bold text-slate-500">
+            {label}
+          </div>
+          <div className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">
+            {value}
+          </div>
+          {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
+        </div>
+
+        <Sparkline data={data} stroke={cfg.stroke} fill={cfg.fill} />
+      </CardSpotlight>
     </motion.div>
   );
 }
@@ -223,25 +245,19 @@ function StatCard({
    PROPS
    ============================================================ */
 type Props = {
-  hocaId: string;
   ogrenciler: UserProfile[];
   odevler: Assignment[];
-  level: number;
-  xp: number;
-  fullName?: string;
 };
 
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
-export default function GenelOzet({
-  hocaId,
-  ogrenciler,
-  odevler,
-  level,
-  xp,
-  fullName,
-}: Props) {
+export default function GenelOzet({ ogrenciler, odevler }: Props) {
+  const { data: profile } = useProfile();
+  const hocaId = profile?.id ?? "";
+  const level = profile?.level ?? 1;
+  const xp = profile?.xp ?? 0;
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
   /* ── Preserved state ── */
   const [inviteLink, setInviteLink] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -308,7 +324,7 @@ export default function GenelOzet({
     }
   };
 
-  /* ── XP calculations (wired to real level/xp props) ── */
+  /* ── XP calculations ── */
   const xpInLevel = xp % XP_PER_LEVEL;
   const xpRemaining = XP_PER_LEVEL - xpInLevel;
   const xpPct = Math.round((xpInLevel / XP_PER_LEVEL) * 100);
@@ -317,7 +333,6 @@ export default function GenelOzet({
     day: "numeric",
     month: "long",
   });
-  const firstName = fullName?.split(" ")[0] ?? null;
 
   /* ── Sparkline trend data (mock history, real current value) ── */
   const n = ozet.toplamOgrenci;
@@ -623,36 +638,8 @@ export default function GenelOzet({
             Ödev Dağılımı
           </h3>
           <p className="text-xs text-slate-500 mb-5">Durum bazlı özet</p>
-          <div className="w-full h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={odevDurumGrafigi}
-                margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
-              >
-                <XAxis
-                  dataKey="durum"
-                  tick={{ fontSize: 12, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 12, fill: "#64748b" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: "#f8fafc" }}
-                  contentStyle={{
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                    boxShadow: "none",
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="adet" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
+            <OdevDurumGrafigi data={odevDurumGrafigi} />
           </div>
         </motion.div>
 

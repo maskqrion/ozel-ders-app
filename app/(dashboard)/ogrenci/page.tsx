@@ -2,26 +2,31 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { attachSignedUrls } from "@/lib/storage";
 import type { UserProfile, Lesson, Assignment, Resource } from "@/lib/types";
+import { LoaderOne } from "@/components/ui/loader";
 
 import Tabs, { type TabDef } from "@/components/dashboard/Tabs";
 import GenelOzet from "@/components/dashboard/ogrenci/GenelOzet";
 import Odevlerim from "@/components/dashboard/ogrenci/Odevlerim";
 import DersTakvimi from "@/components/dashboard/ogrenci/DersTakvimi";
 import Kaynaklar from "@/components/dashboard/ogrenci/Kaynaklar";
-import OgretmenBul from "@/components/dashboard/ogrenci/OgretmenBul";
-import Mesajlar from "@/components/dashboard/shared/Mesajlar";
 import NotificationBell from "@/components/dashboard/shared/NotificationBell";
+
+const OgretmenBul = dynamic(() => import("@/components/dashboard/ogrenci/OgretmenBul"), { ssr: false });
+const Mesajlar = dynamic(() => import("@/components/dashboard/shared/Mesajlar"), { ssr: false });
 
 export default function OgrenciPaneli() {
   const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [dersler, setDersler] = useState<Lesson[]>([]);
   const [odevler, setOdevler] = useState<Assignment[]>([]);
@@ -65,6 +70,13 @@ export default function OgrenciPaneli() {
   }, []);
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") router.push("/login");
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const {
@@ -98,15 +110,22 @@ export default function OgrenciPaneli() {
   useEffect(() => {
     if (!user?.id) return;
 
+    const ogrenciLessonIds = new Set(dersler.map((d) => d.id));
+
     const channel = supabase
-      .channel("ogrenci-bildirimler")
+      .channel(`ogrenci-bildirimler-${user.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "assignments" },
         (payload) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const p = payload as any;
+          const lessonId = p.new?.lesson_id ?? p.old?.lesson_id;
+          if (!ogrenciLessonIds.has(lessonId)) return;
+
           if (payload.eventType === "INSERT") {
             toast("📚 Yeni bir ödev verildi!", { icon: "🔔", duration: 4000 });
-          } else if (payload.eventType === "UPDATE" && payload.new.status === "reddedildi") {
+          } else if (payload.eventType === "UPDATE" && p.new?.status === "reddedildi") {
             toast.error("❌ Bir ödeviniz reddedildi!");
           }
           fetchOdevler(user.id);
@@ -117,7 +136,7 @@ export default function OgrenciPaneli() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchOdevler]);
+  }, [user?.id, fetchOdevler, dersler]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -137,15 +156,11 @@ export default function OgrenciPaneli() {
           fontWeight: 600,
         },
       });
-      const { data } = await supabase
-        .from("users")
-        .select("level, xp")
-        .eq("id", user.id)
-        .single();
+      const { data } = await supabase.rpc("add_user_xp", { amount });
       if (!data) return;
       setProfile((prev) => {
         if (!prev) return prev;
-        if ((data.level ?? prev.level) > prev.level) {
+        if (data.level > prev.level) {
           toast(`🎉 Seviye atladın! Lv ${data.level}'e ulaştın.`, {
             icon: "🚀",
             duration: 4500,
@@ -157,7 +172,7 @@ export default function OgrenciPaneli() {
             },
           });
         }
-        return { ...prev, level: data.level ?? prev.level, xp: data.xp ?? prev.xp };
+        return { ...prev, level: data.level, xp: data.xp };
       });
     },
     [user?.id],
@@ -172,13 +187,9 @@ export default function OgrenciPaneli() {
         icon: "🎯",
         content: (
           <GenelOzet
-            userId={user.id}
             siradakiDers={siradakiDers}
             odevler={odevler}
             dersler={dersler}
-            level={profile?.level ?? 1}
-            xp={profile?.xp ?? 0}
-            fullName={profile?.full_name ?? undefined}
             refetchDersler={() => fetchDersler(user.id)}
             refetchOdevler={() => fetchOdevler(user.id)}
           />
@@ -189,19 +200,14 @@ export default function OgrenciPaneli() {
         label: "Ödevlerim",
         icon: "📝",
         content: (
-          <Odevlerim
-            userId={user.id}
-            odevler={odevler}
-            refetchOdevler={() => fetchOdevler(user.id)}
-            onAwardXp={onAwardXp}
-          />
+          <Odevlerim onAwardXp={onAwardXp} />
         ),
       },
       {
         id: "takvim",
         label: "Ders Takvimi",
         icon: "🗓️",
-        content: <DersTakvimi dersler={dersler} />,
+        content: <DersTakvimi />,
       },
       {
         id: "ogretmen-bul",
@@ -222,23 +228,13 @@ export default function OgrenciPaneli() {
         content: <Kaynaklar kaynaklar={kaynaklar} />,
       },
     ];
-  }, [
-    user?.id,
-    profile?.level,
-    profile?.xp,
-    siradakiDers,
-    odevler,
-    dersler,
-    kaynaklar,
-    fetchDersler,
-    fetchOdevler,
-    onAwardXp,
-  ]);
+  }, [user?.id, siradakiDers, odevler, dersler, kaynaklar, fetchDersler, fetchOdevler, onAwardXp]);
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-emerald-50 font-medium text-emerald-600">
-        Yükleniyor...
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-emerald-50">
+        <LoaderOne color="#059669" size={48} />
+        <p className="text-sm font-medium text-emerald-600">Yükleniyor...</p>
       </div>
     );
   }
@@ -252,7 +248,7 @@ export default function OgrenciPaneli() {
           <Link href="/profil" className="group flex items-center gap-2">
             <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition group-hover:border-emerald-400">
               {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profil" className="h-full w-full object-cover" />
+                <Image src={profile.avatar_url} alt="Profil" width={32} height={32} className="h-full w-full object-cover" />
               ) : (
                 <span className="flex h-full items-center justify-center text-xs">👤</span>
               )}
@@ -274,13 +270,21 @@ export default function OgrenciPaneli() {
         {user ? (
           <Tabs tabs={tabs} accent="green" />
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm"
-          >
-            Yükleniyor...
-          </motion.div>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              {[80, 100, 90, 110, 80].map((w, i) => (
+                <div key={i} className="animate-pulse rounded-full bg-emerald-100" style={{ width: w, height: 34 }} />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse rounded-xl bg-white p-5 shadow-sm">
+                  <div className="mb-3 h-3 w-1/2 rounded-full bg-emerald-100" />
+                  <div className="h-6 w-1/3 rounded-lg bg-emerald-100" />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </main>
     </div>

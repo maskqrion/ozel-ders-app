@@ -7,6 +7,7 @@ export interface UserProfile {
   email: string;
   full_name: string | null;
   role: Role;
+  created_at?: string;
   avatar_url?: string | null;
 
   // Hoca-only profil alanları (öğrencilerde null kalır)
@@ -86,9 +87,7 @@ export interface Message {
   created_at: string;
 }
 
-// Bildirim türleri — varchar(40) olarak şemada esnek tutuldu; bilinen değerler
-// burada listelendi, gelecekteki türler için `string` fallback ile genişleyebilir.
-export type NotificationType = 'message' | 'assignment' | 'quiz' | 'system' | (string & {});
+export type NotificationType = 'message' | 'assignment' | 'quiz' | 'system';
 
 export interface Notification {
   id: string;

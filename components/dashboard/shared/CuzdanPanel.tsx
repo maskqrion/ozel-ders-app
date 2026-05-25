@@ -7,7 +7,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import toast from 'react-hot-toast';
-import { createBrowser } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -154,13 +154,12 @@ export default function CuzdanPanel() {
   useEffect(() => {
     (async () => {
       try {
-        const sb = createBrowser();
-        const { data: { user } } = await sb.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) { setError('Oturum bulunamadı.'); return; }
 
         const [wRes, txRes] = await Promise.all([
-          sb.from('wallets').select('*').eq('id', user.id).single(),
-          sb.from('wallet_transactions')
+          supabase.from('wallets').select('*').eq('id', user.id).single(),
+          supabase.from('wallet_transactions')
             .select('*')
             .eq('wallet_id', user.id)
             .order('created_at', { ascending: false })
@@ -309,7 +308,7 @@ export default function CuzdanPanel() {
             Henüz işlem verisi bulunmuyor
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={220} minWidth={0} minHeight={220}>
             <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
               <defs>
                 <linearGradient id="cuzGradGelir" x1="0" y1="0" x2="0" y2="1">

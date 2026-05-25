@@ -213,6 +213,18 @@ function Avatar({
   );
 }
 
+export const dynamicParams = false;
+
+export async function generateStaticParams(): Promise<{ id: string }[]> {
+  try {
+    const db = serverDb();
+    const { data } = await db.from("users").select("id").eq("role", "hoca");
+    return (data ?? []).map((row: { id: string }) => ({ id: row.id }));
+  } catch {
+    return [];
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    generateMetadata — Server, runs before page render
 ═══════════════════════════════════════════════════════════════ */

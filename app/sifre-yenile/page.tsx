@@ -1,46 +1,33 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
+import { resetPasswordSchema, type ResetPasswordFormValues } from "@/lib/validations/auth";
+import { getErrorMessage } from "@/lib/utils/errorHandler";
 
 export default function SifreYenilePage() {
   const router = useRouter();
 
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalı.");
+  const onSubmit = async (values: ResetPasswordFormValues) => {
+    const { error } = await supabase.auth.updateUser({ password: values.password });
+    if (error) {
+      toast.error(getErrorMessage(error));
       return;
     }
-    if (password !== confirm) {
-      setError("Şifreler birbiriyle eşleşmiyor.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
-
-      toast.success("Şifreniz başarıyla güncellendi. Lütfen tekrar giriş yapın.");
-      await supabase.auth.signOut();
-      router.push("/login");
-    } catch (err: any) {
-      const msg = err?.message ?? "Şifre güncellenemedi.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
+    toast.success("Şifreniz başarıyla güncellendi. Lütfen tekrar giriş yapın.");
+    await supabase.auth.signOut();
+    router.push("/login");
   };
 
   return (
@@ -85,13 +72,7 @@ export default function SifreYenilePage() {
               Yeni şifrenizi iki kez girerek güncelleyin.
             </p>
 
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-              {error && (
-                <div role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
+            <form className="mt-6 space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700">
                   Yeni Şifre
@@ -99,37 +80,39 @@ export default function SifreYenilePage() {
                 <input
                   id="password"
                   type="password"
-                  required
                   autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  {...register("password")}
                   className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                 />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
+                )}
               </div>
 
               <div>
-                <label htmlFor="confirm" className="block text-sm font-medium text-slate-700">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700">
                   Yeni Şifre (Tekrar)
                 </label>
                 <input
-                  id="confirm"
+                  id="confirmPassword"
                   type="password"
-                  required
                   autoComplete="new-password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
                   placeholder="••••••••"
+                  {...register("confirmPassword")}
                   className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15"
                 />
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>
+                )}
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? "Güncelleniyor..." : "Şifreyi Güncelle"}
+                {isSubmitting ? "Güncelleniyor..." : "Şifreyi Güncelle"}
               </button>
             </form>
           </div>

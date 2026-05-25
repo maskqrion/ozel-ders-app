@@ -19,17 +19,11 @@ export default function PushManager() {
 
     let mounted = true;
 
-    const upsertToken = async (token: string) => {
+    const upsertToken = async (token: string, userId: string) => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
         await supabase
           .from("push_tokens")
-          .upsert(
-            { user_id: user.id, token },
-            { onConflict: "token" }
-          );
+          .upsert({ user_id: userId, token }, { onConflict: "token" });
       } catch (err) {
         console.error("[PushManager] token upsert error:", err);
       }
@@ -41,12 +35,10 @@ export default function PushManager() {
         if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
           perm = await PushNotifications.requestPermissions();
         }
-
         if (perm.receive !== "granted") {
           console.warn("[PushManager] push permission not granted:", perm.receive);
           return;
         }
-
         await PushNotifications.register();
       } catch (err) {
         console.error("[PushManager] init error:", err);
@@ -55,18 +47,17 @@ export default function PushManager() {
 
     const registrationHandle = PushNotifications.addListener(
       "registration",
-      (token: Token) => {
+      async (token: Token) => {
         if (!mounted) return;
-        console.log("[PushManager] registration token:", token.value);
-        upsertToken(token.value);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        upsertToken(token.value, user.id);
       }
     );
 
     const registrationErrorHandle = PushNotifications.addListener(
       "registrationError",
-      (err) => {
-        console.error("[PushManager] registrationError:", err);
-      }
+      (err) => { console.error("[PushManager] registrationError:", err); }
     );
 
     const receivedHandle = PushNotifications.addListener(
@@ -83,10 +74,16 @@ export default function PushManager() {
       }
     );
 
-    init();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+        init();
+      }
+    });
 
     return () => {
       mounted = false;
+      subscription.unsubscribe();
       Promise.all([
         registrationHandle.then(h => h.remove()),
         registrationErrorHandle.then(h => h.remove()),

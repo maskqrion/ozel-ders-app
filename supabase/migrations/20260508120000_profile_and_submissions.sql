@@ -5,5 +5,5 @@ alter table public.users
 -- Assignment submission feature: add submission columns to assignments
 alter table public.assignments
   add column if not exists submission_text text,
-  add column if not exists submission_file_url text,
+  add column if not exists submission_file_path text,
   add column if not exists submitted_at timestamptz;

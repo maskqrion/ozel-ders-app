@@ -1,27 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import LessonsCalendar from "@/components/LessonsCalendar";
 import { supabase } from "@/lib/supabase/client";
-import type { Lesson, UserProfile } from "@/lib/types";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { useLessons, useUpdateLessonStatus } from "@/lib/hooks/useLessons";
+import type { UserProfile } from "@/lib/types";
 
 type Props = {
-  hocaId: string;
-  dersler: Lesson[];
   ogrenciler: UserProfile[];
-  refetchDersler: () => void | Promise<void>;
   onAwardXp?: (amount: number, action: string) => void | Promise<void>;
 };
 
-export default function DersTakvimi({
-  hocaId,
-  dersler,
-  ogrenciler,
-  refetchDersler,
-  onAwardXp,
-}: Props) {
+export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
+  const { data: profile } = useProfile();
+  const { data: lessons = [], isLoading } = useLessons(profile?.id, profile?.role);
+  const updateLessonMutation = useUpdateLessonStatus();
+  const queryClient = useQueryClient();
+
   const [secilenOgrenci, setSecilenOgrenci] = useState("");
   const [dersTarihi, setDersTarihi] = useState("");
   const [dersLoading, setDersLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function DersTakvimi({
 
   const seciliGunDersleri = useMemo(() => {
     if (!selectedDate) return [];
-    return dersler.filter((d) => {
+    return lessons.filter((d) => {
       const dd = new Date(d.lesson_date);
       return (
         dd.getFullYear() === selectedDate.getFullYear() &&
@@ -37,18 +37,18 @@ export default function DersTakvimi({
         dd.getDate() === selectedDate.getDate()
       );
     });
-  }, [dersler, selectedDate]);
+  }, [lessons, selectedDate]);
 
   const dersPlanla = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!secilenOgrenci || !dersTarihi) {
+    if (!secilenOgrenci || !dersTarihi || !profile?.id) {
       toast.error("Öğrenci ve tarih seçin.");
       return;
     }
     setDersLoading(true);
     const { error } = await supabase
       .from("lessons")
-      .insert([{ hoca_id: hocaId, ogrenci_id: secilenOgrenci, lesson_date: dersTarihi, status: "bekliyor" }]);
+      .insert([{ hoca_id: profile.id, ogrenci_id: secilenOgrenci, lesson_date: dersTarihi, status: "bekliyor" }]);
     setDersLoading(false);
     if (error) {
       toast.error("Hata: " + error.message);
@@ -57,15 +57,20 @@ export default function DersTakvimi({
     toast.success("Ders planlandı.");
     setSecilenOgrenci("");
     setDersTarihi("");
-    await refetchDersler();
+    queryClient.invalidateQueries({ queryKey: ["lessons"] });
     onAwardXp?.(20, "Yeni ders planlandı");
   };
 
   const dersiTamamla = async (dersId: string) => {
-    const { error } = await supabase.from("lessons").update({ status: "tamamlandi" }).eq("id", dersId);
-    if (error) toast.error("Hata: " + error.message);
-    else await refetchDersler();
+    try {
+      await updateLessonMutation.mutateAsync({ id: dersId, status: "tamamlandi" });
+      toast.success("Ders tamamlandı.");
+    } catch (err: unknown) {
+      toast.error("Hata: " + (err instanceof Error ? err.message : "Bilinmeyen hata"));
+    }
   };
+
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -112,7 +117,7 @@ export default function DersTakvimi({
         className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2"
       >
         <h2 className="mb-4 text-base font-semibold text-slate-800">Ders Takvimi</h2>
-        <LessonsCalendar dersler={dersler} accent="blue" value={selectedDate} onChange={setSelectedDate} />
+        <LessonsCalendar dersler={lessons} accent="blue" value={selectedDate} onChange={setSelectedDate} />
 
         <div className="mt-4 border-t border-slate-100 pt-4">
           <p className="mb-3 text-xs font-medium text-slate-500">
@@ -162,7 +167,8 @@ export default function DersTakvimi({
                     {d.status === "bekliyor" && (
                       <button
                         onClick={() => dersiTamamla(d.id)}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                        disabled={updateLessonMutation.isPending}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
                         title="Dersi Tamamla"
                       >
                         ✓

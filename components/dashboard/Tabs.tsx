@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 
 export type TabDef = {
   id: string;
@@ -12,27 +12,22 @@ export type TabDef = {
 
 type Accent = "blue" | "green";
 
-const accentClasses: Record<Accent, { active: string; bar: string }> = {
-  blue: {
-    active: "text-blue-700",
-    bar: "bg-blue-500",
-  },
-  green: {
-    active: "text-emerald-700",
-    bar: "bg-emerald-500",
-  },
+const accentClasses: Record<Accent, { active: string; indicator: string }> = {
+  blue: { active: "text-blue-700", indicator: "bg-blue-50 shadow-sm" },
+  green: { active: "text-emerald-700", indicator: "bg-emerald-50 shadow-sm" },
 };
 
 export default function Tabs({
   tabs,
   accent = "blue",
-  initialId,
+  defaultTab,
 }: {
   tabs: TabDef[];
   accent?: Accent;
-  initialId?: string;
+  defaultTab?: string;
 }) {
-  const [activeId, setActiveId] = useState<string>(initialId ?? tabs[0]?.id);
+  const [activeId, setActiveId] = useState<string>(defaultTab ?? tabs[0]?.id);
+  const [isPending, startTransition] = useTransition();
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
   const a = accentClasses[accent];
 
@@ -41,7 +36,7 @@ export default function Tabs({
       <div
         role="tablist"
         aria-label="Panel sekmeleri"
-        className="relative mb-6 flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm"
+        className="relative mb-6 flex gap-1 overflow-x-auto scrollbar-hide rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm"
       >
         {tabs.map((t) => {
           const isActive = t.id === active.id;
@@ -50,15 +45,15 @@ export default function Tabs({
               key={t.id}
               role="tab"
               aria-selected={isActive}
-              onClick={() => setActiveId(t.id)}
+              onClick={() => startTransition(() => setActiveId(t.id))}
               className={`relative flex-1 min-w-[110px] whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                 isActive ? a.active : "text-slate-500 hover:text-slate-700"
               }`}
             >
               {isActive && (
                 <motion.span
-                  layoutId={`tab-active-bg-${accent}`}
-                  className="absolute inset-0 rounded-lg bg-slate-50"
+                  layoutId="activeTabIndicator"
+                  className={`absolute inset-0 rounded-lg ${a.indicator}`}
                   transition={{ type: "spring", stiffness: 380, damping: 32 }}
                 />
               )}
@@ -66,13 +61,6 @@ export default function Tabs({
                 {t.icon && <span aria-hidden>{t.icon}</span>}
                 <span>{t.label}</span>
               </span>
-              {isActive && (
-                <motion.span
-                  layoutId={`tab-active-bar-${accent}`}
-                  className={`absolute bottom-0 left-3 right-3 h-[3px] rounded-full ${a.bar}`}
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                />
-              )}
             </button>
           );
         })}
@@ -81,10 +69,10 @@ export default function Tabs({
       <AnimatePresence mode="wait">
         <motion.div
           key={active.id}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: isPending ? 0.6 : 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
         >
           {active.content}
         </motion.div>
