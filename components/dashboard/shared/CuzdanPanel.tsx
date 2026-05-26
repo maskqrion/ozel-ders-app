@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import { m, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
@@ -93,9 +93,9 @@ function AnimatedBalance({ value, currency }: { value: number; currency: string 
   return (
     <div className="flex items-baseline gap-2">
       <span className="text-xl font-semibold text-white/50">{symbol}</span>
-      <motion.span className="text-5xl font-black tracking-tight text-white tabular-nums leading-none">
+      <m.span className="text-5xl font-black tracking-tight text-white tabular-nums leading-none">
         {display}
-      </motion.span>
+      </m.span>
     </div>
   );
 }
@@ -170,7 +170,7 @@ export default function CuzdanPanel() {
         if (txRes.error)              { setError('İşlem geçmişi yüklenemedi.'); return; }
 
         setWallet(wRes.data);
-        setTransactions(txRes.data ?? []);
+        setTransactions((txRes.data ?? []) as WalletTransaction[]);
       } catch {
         setError('Beklenmeyen bir hata oluştu.');
       } finally {
@@ -195,7 +195,7 @@ export default function CuzdanPanel() {
   const totalGider = transactions.reduce((s, t) => TX_META[t.type].sign === '-' ? s + t.amount : s, 0);
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.38, ease: 'easeOut' }}
@@ -210,13 +210,13 @@ export default function CuzdanPanel() {
         }}
       >
         {/* Aurora blobs */}
-        <motion.div
+        <m.div
           className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(16,185,129,.38) 0%, transparent 68%)', filter: 'blur(36px)' }}
           animate={{ scale: [1, 1.18, 1], opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.div
+        <m.div
           className="pointer-events-none absolute -bottom-14 -left-14 h-52 w-52 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(14,165,233,.22) 0%, transparent 68%)', filter: 'blur(28px)' }}
           animate={{ scale: [1, 1.1, 1], opacity: [0.45, 0.75, 0.45] }}
@@ -269,7 +269,7 @@ export default function CuzdanPanel() {
               day: '2-digit', month: 'long', year: 'numeric',
             })}
           </p>
-          <motion.button
+          <m.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             onClick={() => toast.success('Bakiye yükleme yakında aktif olacak! 🚀', {
@@ -282,7 +282,7 @@ export default function CuzdanPanel() {
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Bakiye Yükle
-          </motion.button>
+          </m.button>
         </div>
       </div>
 
@@ -373,7 +373,7 @@ export default function CuzdanPanel() {
                 const isGelir = meta.sign === '+';
 
                 return (
-                  <motion.li
+                  <m.li
                     key={tx.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -416,13 +416,13 @@ export default function CuzdanPanel() {
                     >
                       {meta.sign}₺{fmt(tx.amount)}
                     </span>
-                  </motion.li>
+                  </m.li>
                 );
               })}
             </ul>
           </AnimatePresence>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 }

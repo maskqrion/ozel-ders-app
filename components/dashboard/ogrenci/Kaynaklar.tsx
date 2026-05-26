@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import type { Resource } from "@/lib/types";
 import { CardSpotlight } from "@/components/ui/card-spotlight";
 
@@ -11,13 +11,13 @@ type Props = {
 export default function Kaynaklar({ kaynaklar }: Props) {
   if (kaynaklar.length === 0) {
     return (
-      <motion.p
+      <m.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500"
       >
         Henüz kaynak yüklenmedi.
-      </motion.p>
+      </m.p>
     );
   }
 
@@ -25,7 +25,7 @@ export default function Kaynaklar({ kaynaklar }: Props) {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <AnimatePresence initial={false}>
         {kaynaklar.map((k, i) => (
-          <motion.div
+          <m.div
             key={k.id}
             layout
             initial={{ opacity: 0, y: 8 }}
@@ -57,7 +57,7 @@ export default function Kaynaklar({ kaynaklar }: Props) {
                 </div>
               </a>
             </CardSpotlight>
-          </motion.div>
+          </m.div>
         ))}
       </AnimatePresence>
     </div>

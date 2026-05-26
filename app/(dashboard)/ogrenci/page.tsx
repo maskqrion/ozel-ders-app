@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import toast from "react-hot-toast";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
@@ -158,10 +158,11 @@ export default function OgrenciPaneli() {
       });
       const { data } = await supabase.rpc("add_user_xp", { amount });
       if (!data) return;
+      const xpData = data as { level: number; xp: number };
       setProfile((prev) => {
         if (!prev) return prev;
-        if (data.level > prev.level) {
-          toast(`🎉 Seviye atladın! Lv ${data.level}'e ulaştın.`, {
+        if (xpData.level > prev.level) {
+          toast(`🎉 Seviye atladın! Lv ${xpData.level}'e ulaştın.`, {
             icon: "🚀",
             duration: 4500,
             style: {
@@ -172,7 +173,7 @@ export default function OgrenciPaneli() {
             },
           });
         }
-        return { ...prev, level: data.level, xp: data.xp };
+        return { ...prev, level: xpData.level, xp: xpData.xp };
       });
     },
     [user?.id],

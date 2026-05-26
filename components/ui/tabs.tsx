@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export function Tabs({
             >
               {/* Active bottom hairline — burnt-sienna, 1px */}
               {isActive && (
-                <motion.span
+                <m.span
                   layoutId="active-tab-indicator"
                   className="absolute bottom-0 inset-x-0 h-px"
                   style={{ background: "#dc5000" }}
@@ -75,7 +75,7 @@ export function Tabs({
 
               {/* Active pill background (dark-cork) */}
               {isActive && (
-                <motion.span
+                <m.span
                   layoutId="active-tab-bg"
                   className={cn(
                     "absolute inset-0 rounded-t-[8px]",
@@ -127,7 +127,7 @@ function FadeInDiv({
         if (offset < 0 || offset > 2) return null;
 
         return (
-          <motion.div
+          <m.div
             key={tab.value}
             style={{
               position: "absolute",
@@ -150,7 +150,7 @@ function FadeInDiv({
             transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
           >
             {tab.content}
-          </motion.div>
+          </m.div>
         );
       })}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 type Size = "sm" | "md" | "lg";
 
@@ -102,7 +102,7 @@ function InteractiveStars({
       {[1, 2, 3, 4, 5].map((n) => {
         const isFilled = n <= display;
         return (
-          <motion.button
+          <m.button
             key={n}
             type="button"
             onMouseEnter={() => setHover(n)}
@@ -122,7 +122,7 @@ function InteractiveStars({
             } focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300`}
           >
             <StarSvg size={px} />
-          </motion.button>
+          </m.button>
         );
       })}
     </div>

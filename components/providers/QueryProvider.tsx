@@ -1,7 +1,10 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LazyMotion } from "framer-motion";
 import { useState } from "react";
+
+const loadFeatures = () => import("framer-motion").then((mod) => mod.domMax);
 
 export default function QueryProvider({ children }: { children: React.ReactNode }) {
   const [client] = useState(
@@ -9,12 +12,16 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 2 * 60 * 1000,
+            staleTime: 5 * 60 * 1000,
             gcTime: 10 * 60 * 1000,
             retry: 1,
           },
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <LazyMotion features={loadFeatures}>{children}</LazyMotion>
+    </QueryClientProvider>
+  );
 }

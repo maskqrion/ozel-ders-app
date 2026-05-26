@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -30,9 +30,10 @@ export default function Kaynaklar({ kaynaklar }: Props) {
       throw new Error("validation");
     }
     const filePath = await uploadFile({ file, folder: `kaynaklar/${profile?.id}` });
+    if (!filePath) throw new Error("Dosya yolu alınamadı.");
     const { error: dbError } = await supabase
       .from("resources")
-      .insert([{ yukleyen_id: profile?.id, title: fileTitle, file_path: filePath }]);
+      .insert([{ yukleyen_id: profile!.id, title: fileTitle, file_path: filePath }]);
     if (dbError) throw dbError;
     toast.success("Dosya yüklendi.");
     setFileTitle("");
@@ -42,7 +43,7 @@ export default function Kaynaklar({ kaynaklar }: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
@@ -70,9 +71,9 @@ export default function Kaynaklar({ kaynaklar }: Props) {
             Dosyayı Yükle
           </StatefulButton>
         </div>
-      </motion.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.05 }}
@@ -83,7 +84,7 @@ export default function Kaynaklar({ kaynaklar }: Props) {
           {kaynaklar.length === 0 && <p className="text-sm text-slate-400">Henüz kaynak yüklenmedi.</p>}
           <AnimatePresence initial={false}>
             {kaynaklar.map((k) => (
-              <motion.div
+              <m.div
                 key={k.id}
                 layout
                 initial={{ opacity: 0, y: 6 }}
@@ -112,11 +113,11 @@ export default function Kaynaklar({ kaynaklar }: Props) {
                     <span className="truncate text-sm text-slate-700">{k.title}</span>
                   </a>
                 </CardSpotlight>
-              </motion.div>
+              </m.div>
             ))}
           </AnimatePresence>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

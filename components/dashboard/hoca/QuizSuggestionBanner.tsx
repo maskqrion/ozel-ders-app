@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ImagesBadge } from "@/components/ui/images-badge";
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 
 export default function QuizSuggestionBanner({ ogrenciAdi, count, onCreate, onDismiss }: Props) {
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, y: -16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -20,14 +20,14 @@ export default function QuizSuggestionBanner({ ogrenciAdi, count, onCreate, onDi
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       className="relative mb-6 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-sky-50 p-5 shadow-sm"
     >
-      <motion.span
+      <m.span
         aria-hidden
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.1 }}
         className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-200/40 blur-2xl"
       />
-      <motion.span
+      <m.span
         aria-hidden
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -61,15 +61,15 @@ export default function QuizSuggestionBanner({ ogrenciAdi, count, onCreate, onDi
           >
             Şimdi Değil
           </button>
-          <motion.button
+          <m.button
             onClick={onCreate}
             whileTap={{ scale: 0.97 }}
             className="rounded-lg bg-gradient-to-r from-emerald-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-600 hover:to-sky-600"
           >
             Quiz Hazırla →
-          </motion.button>
+          </m.button>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,34 +1,43 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ORYZO AI — Design System Tokens
-   Cork coaster in a blackout studio. Warm cream on near-black canvas.
+   Özel Ders Pro — Design System Tokens
+   Eğitim Psikolojisi renk paleti · 60-30-10 Kuralı
+   Primary: Mavi · Secondary: Yeşil · Accent: Turuncu
    ───────────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* ── Colors ──────────────────────────────────────────────────────────────── */
-  /* bg-studio-black  text-studio-black  border-studio-black  etc. */
-  --color-studio-black:  #100904;
-  /* bg-warm-cream  text-warm-cream  border-warm-cream  etc. */
-  --color-warm-cream:    #ffedd7;
-  /* bg-cork-shadow  border-cork-shadow */
-  --color-cork-shadow:   #40372e;
-  /* bg-dark-cork  (filled pill button surface) */
-  --color-dark-cork:     #382416;
-  /* text-burnt-sienna  border-burnt-sienna  (hairline accent only) */
-  --color-burnt-sienna:  #dc5000;
-  /* text-grey-brown  (muted labels) */
-  --color-grey-brown:    #6c5f51;
-  /* bg-forest-grid  (photographic palette reference) */
-  --color-forest-grid:   #445231;
+  /* ── PRIMARY — Mavi (60%) ────────────────────────────────────────────────── */
+  /* Ana yüzeyler, header, navigasyon, birincil butonlar                       */
+  /* bg-primary  text-primary  border-primary  ring-primary  etc.              */
+  --color-primary:       #2563eb;   /* Blue-600  — marka mavisi              */
+  --color-primary-light: #eff6ff;   /* Blue-50   — açık alan dolguları       */
+  --color-primary-soft:  #dbeafe;   /* Blue-100  — hover bg, hafif vurgu     */
+  --color-primary-deep:  #1e3a8a;   /* Blue-900  — koyu header / sidebar     */
+  --color-primary-hover: #1d4ed8;   /* Blue-700  — hover durumu              */
+
+  /* ── SECONDARY — Yeşil (30%) ─────────────────────────────────────────────── */
+  /* Başarı, ilerleme, dinamik veriler, XP barları                             */
+  /* bg-secondary  text-secondary  border-secondary  etc.                      */
+  --color-secondary:       #10b981; /* Emerald-500 — başarı yeşili           */
+  --color-secondary-light: #ecfdf5; /* Emerald-50  — açık yeşil fon         */
+  --color-secondary-soft:  #d1fae5; /* Emerald-100 — hafif yeşil bg          */
+  --color-secondary-deep:  #065f46; /* Emerald-900 — koyu yeşil              */
+  --color-secondary-hover: #059669; /* Emerald-600 — hover durumu            */
+
+  /* ── ACCENT — Turuncu (10%) ──────────────────────────────────────────────── */
+  /* YALNIZCA CTA (harekete geçirici) butonları için kullanılır               */
+  /* bg-accent  text-accent  border-accent  etc.                               */
+  --color-accent:       #f97316;   /* Orange-500 — CTA turuncu              */
+  --color-accent-light: #fff7ed;   /* Orange-50  — açık turuncu fon         */
+  --color-accent-hover: #ea580c;   /* Orange-600 — hover / active           */
+  --color-accent-deep:  #c2410c;   /* Orange-700 — basılı / disabled        */
 
   /* ── Typography ──────────────────────────────────────────────────────────── */
-  /* font-halyard → font-family: halyard-display-variable, fallbacks */
-  --font-halyard: 'halyard-display-variable', 'Plus Jakarta Sans', 'Figtree',
-                  'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-halyard: 'Plus Jakarta Sans', 'Figtree', 'DM Sans',
+                  ui-sans-serif, system-ui, sans-serif;
 
-  /* Type scale — generates text-caption through text-display utilities.
-     Format: size / line-height (Tailwind v4 shorthand)                       */
+  /* Type scale — text-caption → text-display yardımcı sınıfları üretir.     */
   --text-caption:    10px / 1.2;
   --text-body:       14px / 1.33;
   --text-subheading: 18px / 1.2;
@@ -38,16 +47,12 @@
   --text-display:    51px / 0.9;
 
   /* ── Border Radii ────────────────────────────────────────────────────────── */
-  /* rounded-card (12px · cards & thumbnails)                                  */
-  --radius-card: 12px;
-  /* rounded-pill (36px · filled pill buttons)                                 */
-  --radius-pill: 36px;
-  /* rounded-btn (22.5px · ghost outlined pill buttons)                        */
-  --radius-btn:  22.5px;
+  --radius-card: 12px;   /* Kart ve thumbnail köşeleri  */
+  --radius-pill: 36px;   /* Dolu pill butonlar          */
+  --radius-btn:  22.5px; /* Çerçeveli pill butonlar     */
 }
 
-/* Existing bg/fg colour utilities — wired to :root variables so a future
-   light-mode override only needs to touch :root, not Tailwind internals.      */
+/* Tailwind'in background / foreground renk sistemi ile entegrasyon           */
 @theme inline {
   --color-background: var(--background);
   --color-foreground:  var(--foreground);
@@ -55,27 +60,36 @@
   --font-mono:         var(--font-geist-mono);
 }
 
-/* ─── Raw CSS Custom Properties (always available via var()) ─────────────── */
+/* ─── CSS Özel Değişkenleri (var() ile her yerde erişilebilir) ──────────── */
 :root {
-  /* Default canvas: Studio Black — near-black with faint warm-brown undertone */
-  --background: #100904;
-  --foreground:  #ffedd7;
+  /* Varsayılan canvas: açık profesyonel arka plan                            */
+  --background: #f8fafc;   /* Slate-50 — genel sayfa zemini                  */
+  --foreground:  #0f172a;  /* Slate-900 — ana metin rengi                    */
 
-  /* Mirror all color tokens here so they work in arbitrary inline styles too  */
-  --color-studio-black:  #100904;
-  --color-warm-cream:    #ffedd7;
-  --color-cork-shadow:   #40372e;
-  --color-dark-cork:     #382416;
-  --color-burnt-sienna:  #dc5000;
-  --color-grey-brown:    #6c5f51;
-  --color-forest-grid:   #445231;
+  /* Renk tokenları — inline stil kullanımları için mirror               */
+  --color-primary:         #2563eb;
+  --color-primary-light:   #eff6ff;
+  --color-primary-soft:    #dbeafe;
+  --color-primary-deep:    #1e3a8a;
+  --color-primary-hover:   #1d4ed8;
 
-  /* Surface stack (two levels + cream edge)                                   */
-  --surface-canvas:       #100904;
-  --surface-raised-cork:  #382416;
-  --surface-cream-edge:   #ffedd7;
+  --color-secondary:       #10b981;
+  --color-secondary-light: #ecfdf5;
+  --color-secondary-soft:  #d1fae5;
+  --color-secondary-deep:  #065f46;
+  --color-secondary-hover: #059669;
 
-  /* Spacing scale — kept in :root only to preserve Tailwind's default scale   */
+  --color-accent:          #f97316;
+  --color-accent-light:    #fff7ed;
+  --color-accent-hover:    #ea580c;
+  --color-accent-deep:     #c2410c;
+
+  /* Yüzey katmanları                                                          */
+  --surface-canvas:  #f8fafc;  /* Sayfa zemini                               */
+  --surface-card:    #ffffff;  /* Kart yüzeyi                                */
+  --surface-header:  #1e3a8a;  /* Koyu mavi header/sidebar                   */
+
+  /* Boşluk skalası — Tailwind'in varsayılan skalası korunur                  */
   --spacing-6:   6px;
   --spacing-8:   8px;
   --spacing-9:   9px;
@@ -90,30 +104,30 @@
   --spacing-68:  68px;
   --spacing-204: 204px;
 
-  /* Named border radii                                                         */
+  /* Border radii                                                               */
   --radius-cards:           12px;
-  --radius-inputs:          0px;
-  --radius-buttons-flat:    0px;
+  --radius-inputs:          8px;
+  --radius-buttons-flat:    8px;
   --radius-buttons-pill:    36px;
   --radius-buttons-rounded: 22.5px;
 
-  /* Semantic layout constants                                                  */
-  --section-gap:   80px;
-  --card-padding:  24px;
-  --element-gap:   18px;
+  /* Semantik yerleşim sabitleri                                               */
+  --section-gap:  80px;
+  --card-padding: 24px;
+  --element-gap:  18px;
 
-  /* Typographic weights                                                        */
+  /* Tipografi ağırlıkları                                                      */
   --font-weight-regular: 400;
   --font-weight-medium:  500;
 
-  /* Leading scale (raw — also embedded in text-* tokens above)                */
-  --leading-caption:     1.2;
-  --leading-body:        1.33;
-  --leading-subheading:  1.2;
-  --leading-heading-sm:  1.1;
-  --leading-heading:     1.09;
-  --leading-heading-lg:  1;
-  --leading-display:     0.9;
+  /* Satır aralıkları (text-* tokenlarında da gömülü)                         */
+  --leading-caption:    1.2;
+  --leading-body:       1.33;
+  --leading-subheading: 1.2;
+  --leading-heading-sm: 1.1;
+  --leading-heading:    1.09;
+  --leading-heading-lg: 1;
+  --leading-display:    0.9;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */

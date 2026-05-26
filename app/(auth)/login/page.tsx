@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
@@ -195,7 +195,7 @@ function FloatingBadge({
   className?: string;
 }) {
   return (
-    <motion.div
+    <m.div
       className={`absolute ${className}`}
       style={{ rotate }}
       animate={{ y: [0, -8, 0] }}
@@ -204,7 +204,7 @@ function FloatingBadge({
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-[0_8px_32px_-8px_rgba(15,23,42,.14)] px-4 py-3 border border-white/80">
         {children}
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -215,7 +215,7 @@ function AuroraBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
       {/* Blob 1 – Emerald, sağ-üst */}
-      <motion.div
+      <m.div
         style={{
           position: "absolute",
           width: "72%",
@@ -231,7 +231,7 @@ function AuroraBackground() {
         transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
       />
       {/* Blob 2 – Sky, sol-alt */}
-      <motion.div
+      <m.div
         style={{
           position: "absolute",
           width: "62%",
@@ -247,7 +247,7 @@ function AuroraBackground() {
         transition={{ duration: 25, repeat: Infinity, ease: "easeInOut", delay: 4 }}
       />
       {/* Blob 3 – Violet, merkez */}
-      <motion.div
+      <m.div
         style={{
           position: "absolute",
           width: "48%",
@@ -357,7 +357,7 @@ function LeftPanel({ isLogin }: { isLogin: boolean }) {
 
         <div className="flex-1 flex flex-col justify-center max-w-lg">
           <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
               key={isLogin ? "login-left" : "signup-left"}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -397,12 +397,12 @@ function LeftPanel({ isLogin }: { isLogin: boolean }) {
                   ? "Hocan, ödevlerin, takvimin ve gelişim raporun seni bekliyor. Kaldığın yerden devam et."
                   : "Birkaç dakika içinde profilini oluştur, sana en uygun hocayı seç ve bu hafta ilk dersine başla."}
               </p>
-            </motion.div>
+            </m.div>
           </AnimatePresence>
 
           <ul className="mt-8 space-y-3">
             {bullets.map((b, i) => (
-              <motion.li
+              <m.li
                 key={b}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -413,12 +413,12 @@ function LeftPanel({ isLogin }: { isLogin: boolean }) {
                   <Check size={13} strokeWidth={3} />
                 </span>
                 <span className="text-sm font-medium">{b}</span>
-              </motion.li>
+              </m.li>
             ))}
           </ul>
 
           {/* Testimonial */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.4 }}
@@ -446,7 +446,7 @@ function LeftPanel({ isLogin }: { isLogin: boolean }) {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </div>
 
         <div className="text-xs text-slate-400">
@@ -500,7 +500,7 @@ function Field({
         className={`flex items-center gap-2.5 bg-white border rounded-xl px-3.5 py-3 transition-[border-color,box-shadow] duration-200 ${
           error
             ? "border-rose-300 shadow-[0_0_0_3px_rgba(239,68,68,.10)]"
-            : "border-slate-200 hover:border-slate-300 focus-within:border-emerald-400 focus-within:shadow-[0_0_0_3px_rgba(16,185,129,.12),0_0_20px_rgba(16,185,129,.16)]"
+            : "border-slate-200 hover:border-slate-300 focus-within:border-primary focus-within:shadow-[0_0_0_3px_rgba(37,99,235,.12)]"
         }`}
       >
         {Icon && <Icon size={17} className="text-slate-400 shrink-0" />}
@@ -537,7 +537,7 @@ function Tabs({
 }) {
   return (
     <div className="relative inline-flex p-1 bg-slate-100 rounded-xl">
-      <motion.div
+      <m.div
         className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm"
         animate={{ left: isLogin ? 4 : "calc(50%)" }}
         transition={{ type: "spring", stiffness: 400, damping: 32 }}
@@ -670,7 +670,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => switchMode(!isLogin)}
-                className="font-bold text-emerald-700 hover:text-emerald-800 transition-colors"
+                className="font-bold text-secondary hover:text-secondary-hover transition-colors"
               >
                 {isLogin ? "Kayıt ol" : "Giriş yap"}
               </button>
@@ -680,7 +680,7 @@ export default function LoginPage() {
           {/* Form area */}
           <div className="flex-1 flex items-center justify-center px-6 lg:px-10 py-8">
             <AnimatePresence mode="wait">
-              <motion.div
+              <m.div
                 key={isLogin ? "login-form" : "signup-form"}
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -826,14 +826,14 @@ export default function LoginPage() {
                           onChange={(e) => setRemember(e.target.checked)}
                           className="peer sr-only"
                         />
-                        <span className="h-4 w-4 rounded-md border border-slate-300 bg-white grid place-items-center peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition">
+                        <span className="h-4 w-4 rounded-md border border-slate-300 bg-white grid place-items-center peer-checked:bg-secondary peer-checked:border-secondary transition">
                           {remember && <Check size={11} strokeWidth={3} className="text-white" />}
                         </span>
                         <span className="text-sm text-slate-600">Beni hatırla</span>
                       </label>
                       <Link
                         href="/sifremi-unuttum"
-                        className="text-sm font-semibold text-emerald-700 hover:text-emerald-800 transition-colors"
+                        className="text-sm font-semibold text-secondary hover:text-secondary-hover transition-colors"
                       >
                         Şifremi unuttum
                       </Link>
@@ -846,7 +846,7 @@ export default function LoginPage() {
                         onChange={(e) => setAccept(e.target.checked)}
                         className="peer sr-only"
                       />
-                      <span className="h-4 w-4 mt-0.5 rounded-md border border-slate-300 bg-white grid place-items-center peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition shrink-0">
+                      <span className="h-4 w-4 mt-0.5 rounded-md border border-slate-300 bg-white grid place-items-center peer-checked:bg-secondary peer-checked:border-secondary transition shrink-0">
                         {accept && <Check size={11} strokeWidth={3} className="text-white" />}
                       </span>
                       <span className="text-[13px] text-slate-600 leading-relaxed">
@@ -863,24 +863,19 @@ export default function LoginPage() {
                   )}
 
                   {/* Submit */}
-                  <motion.button
+                  <m.button
                     type="submit"
                     disabled={!canSubmit}
                     whileTap={canSubmit ? { scale: 0.98 } : {}}
                     className={`w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 text-base font-bold text-white rounded-xl transition ${
                       canSubmit
-                        ? "shadow-[0_8px_24px_-8px_rgba(16,185,129,.5)] hover:-translate-y-px hover:shadow-[0_12px_28px_-8px_rgba(16,185,129,.55)]"
-                        : "cursor-not-allowed opacity-60"
+                        ? "bg-accent hover:bg-accent-hover shadow-[0_8px_24px_-8px_rgba(249,115,22,.5)] hover:-translate-y-px hover:shadow-[0_12px_28px_-8px_rgba(249,115,22,.55)]"
+                        : "bg-slate-300 text-slate-400 cursor-not-allowed opacity-60"
                     }`}
-                    style={
-                      canSubmit
-                        ? { background: "linear-gradient(180deg, #10b981 0%, #059669 100%)" }
-                        : { background: "#cbd5e1", color: "#94a3b8" }
-                    }
                   >
                     {isSubmitting ? (
                       <>
-                        <motion.span
+                        <m.span
                           aria-hidden
                           animate={{ rotate: 360 }}
                           transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -894,7 +889,7 @@ export default function LoginPage() {
                         <ArrowRight size={16} strokeWidth={2.5} />
                       </>
                     )}
-                  </motion.button>
+                  </m.button>
 
                   {/* SSL footnote */}
                   <div className="text-center text-xs text-slate-400 pt-1">
@@ -902,7 +897,7 @@ export default function LoginPage() {
                     256-bit SSL ile şifrelenmiş bağlantı
                   </div>
                 </form>
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         </div>

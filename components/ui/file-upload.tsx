@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
@@ -40,7 +40,7 @@ export function FileUpload({
 
   return (
     <div className={cn("w-full", className)}>
-      <motion.div
+      <m.div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
@@ -56,7 +56,7 @@ export function FileUpload({
         )}
       >
         {/* Icon */}
-        <motion.div
+        <m.div
           animate={{ y: dragging ? -4 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
           className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
@@ -77,11 +77,11 @@ export function FileUpload({
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" x2="12" y1="3" y2="15" />
           </svg>
-        </motion.div>
+        </m.div>
 
         <AnimatePresence mode="wait">
           {file ? (
-            <motion.div
+            <m.div
               key="file"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -92,9 +92,9 @@ export function FileUpload({
               <p className="mt-0.5 text-xs text-slate-400">
                 {(file.size / 1024).toFixed(0)} KB
               </p>
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="empty"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -106,7 +106,7 @@ export function FileUpload({
                 <span className="text-blue-500 underline underline-offset-2">seç</span>
               </p>
               <p className="mt-0.5 text-xs text-slate-400">Maks. {maxSizeMB} MB</p>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
 
@@ -117,7 +117,7 @@ export function FileUpload({
           className="sr-only"
           onChange={(e) => handleFiles(e.target.files)}
         />
-      </motion.div>
+      </m.div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import type { Assignment, Lesson } from "@/lib/types";
@@ -282,7 +282,7 @@ export default function GenelOzet({
       {/* ═══════════════════════════════════════════════════════
           WELCOME CARD  — XP hero, greeting, quick stats
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
@@ -364,7 +364,7 @@ export default function GenelOzet({
                     />
                   ))}
                 </div>
-                <motion.div
+                <m.div
                   initial={{ width: 0 }}
                   animate={{ width: `${xpPct}%` }}
                   transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
@@ -378,7 +378,7 @@ export default function GenelOzet({
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 h-5 w-5 rounded-full bg-white border-2 border-emerald-500 grid place-items-center shadow-sm">
                     <Zap size={9} strokeWidth={3} className="text-emerald-600" />
                   </div>
-                </motion.div>
+                </m.div>
               </div>
 
               <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-slate-500">
@@ -445,12 +445,12 @@ export default function GenelOzet({
             </div>
           </div>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* ═══════════════════════════════════════════════════════
           UPCOMING LESSONS  — real dersler data
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.08 }}
@@ -478,7 +478,7 @@ export default function GenelOzet({
         <div className="divide-y divide-slate-100">
           <AnimatePresence initial={false}>
             {upcomingDersler.length === 0 ? (
-              <motion.div
+              <m.div
                 key="empty-lessons"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -495,10 +495,10 @@ export default function GenelOzet({
                 <p className="text-xs text-slate-400 mt-1">
                   Hocanıza bağlanarak ders rezervasyonu yapabilirsiniz.
                 </p>
-              </motion.div>
+              </m.div>
             ) : (
               upcomingDersler.map((ders, i) => (
-                <motion.div
+                <m.div
                   key={ders.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -542,7 +542,7 @@ export default function GenelOzet({
                     Detay
                     <ArrowRight size={12} strokeWidth={2.5} />
                   </button>
-                </motion.div>
+                </m.div>
               ))
             )}
           </AnimatePresence>
@@ -562,12 +562,12 @@ export default function GenelOzet({
             </span>
           </div>
         )}
-      </motion.div>
+      </m.div>
 
       {/* ═══════════════════════════════════════════════════════
           HOMEWORK LIST  — real odevler data
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.14 }}
@@ -599,7 +599,7 @@ export default function GenelOzet({
         <div className="divide-y divide-slate-100">
           <AnimatePresence initial={false}>
             {displayOdevler.length === 0 ? (
-              <motion.div
+              <m.div
                 key="empty-hw"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -613,7 +613,7 @@ export default function GenelOzet({
                 <p className="text-sm font-semibold text-slate-400">
                   Henüz ödev yok
                 </p>
-              </motion.div>
+              </m.div>
             ) : (
               displayOdevler.map((odev, i) => {
                 const cfg = STATUS_CFG[odev.status as OdevStatus] ?? STATUS_CFG.verildi;
@@ -621,7 +621,7 @@ export default function GenelOzet({
                 const teacherEmail = odev.lessons?.users?.email ?? null;
 
                 return (
-                  <motion.div
+                  <m.div
                     key={odev.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -671,7 +671,7 @@ export default function GenelOzet({
                     >
                       {cfg.label}
                     </span>
-                  </motion.div>
+                  </m.div>
                 );
               })
             )}
@@ -706,12 +706,12 @@ export default function GenelOzet({
             )}
           </div>
         )}
-      </motion.div>
+      </m.div>
 
       {/* ═══════════════════════════════════════════════════════
           INVITE CARD  — preserved Supabase invite logic
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
@@ -757,7 +757,7 @@ export default function GenelOzet({
             {!connecting && <ArrowRight size={14} strokeWidth={2.5} />}
           </button>
         </form>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

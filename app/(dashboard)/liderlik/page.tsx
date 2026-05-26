@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import { XP_PER_LEVEL } from "@/lib/constants";
 
@@ -206,10 +206,10 @@ function PodiumCard({
   entry: LeaderEntry | undefined;
   delay: number;
 }) {
-  const m = MEDAL[rank];
+  const medal = MEDAL[rank];
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] }}
@@ -217,32 +217,32 @@ function PodiumCard({
     >
       {/* Card */}
       <div
-        className={`w-full rounded-2xl border ${m.border} ${m.cardGrad} shadow-lg ${m.shadow} p-4 flex flex-col items-center gap-2 ${
+        className={`w-full rounded-2xl border ${medal.border} ${medal.cardGrad} shadow-lg ${medal.shadow} p-4 flex flex-col items-center gap-2 ${
           rank === 1 ? "pb-6 pt-5" : "py-4"
         }`}
       >
         {/* Medal emoji */}
-        <span className={rank === 1 ? "text-3xl" : "text-2xl"} aria-label={m.label}>
-          {m.emoji}
+        <span className={rank === 1 ? "text-3xl" : "text-2xl"} aria-label={medal.label}>
+          {medal.emoji}
         </span>
 
         {/* Avatar */}
         <Avatar
           entry={entry ?? ({ id: "x", full_name: null, level: 0, xp: 0, avatar_url: null, role: "ogrenci" } as LeaderEntry)}
-          sizeClass={m.avatarSize}
-          textClass={m.avatarText}
-          ringClass={entry ? m.avatarRing : ""}
+          sizeClass={medal.avatarSize}
+          textClass={medal.avatarText}
+          ringClass={entry ? medal.avatarRing : ""}
         />
 
         {/* Name */}
-        <p className={`text-center text-slate-800 ${m.nameSize} leading-tight max-w-[110px] truncate`}>
+        <p className={`text-center text-slate-800 ${medal.nameSize} leading-tight max-w-[110px] truncate`}>
           {entry?.full_name ?? "—"}
         </p>
 
         {/* Level badge */}
         {entry && (
           <span
-            className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${m.badgeGrad} px-2.5 py-0.5 text-xs font-bold text-white shadow-sm ${m.badgeShadow}`}
+            className={`inline-flex items-center gap-1 rounded-full bg-gradient-to-r ${medal.badgeGrad} px-2.5 py-0.5 text-xs font-bold text-white shadow-sm ${medal.badgeShadow}`}
           >
             <StarIcon size={10} className="text-white" />
             Lv {entry.level}
@@ -251,7 +251,7 @@ function PodiumCard({
 
         {/* XP */}
         {entry && (
-          <p className={`text-xs font-semibold ${m.rankText}`}>
+          <p className={`text-xs font-semibold ${medal.rankText}`}>
             {fmtXP(entry.xp)} XP
           </p>
         )}
@@ -259,9 +259,9 @@ function PodiumCard({
 
       {/* Plinth */}
       <div
-        className={`w-full rounded-b-xl bg-gradient-to-b ${m.plinthGrad} ${m.plinthH} opacity-80`}
+        className={`w-full rounded-b-xl bg-gradient-to-b ${medal.plinthGrad} ${medal.plinthH} opacity-80`}
       />
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -353,33 +353,33 @@ export default function LiderlikPage() {
         }}
       >
         <div className="mx-auto max-w-4xl px-6 py-10 text-center">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, ease: "backOut" }}
             className="mb-3 text-5xl"
           >
             🏆
-          </motion.div>
-          <motion.h1
+          </m.div>
+          <m.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.1 }}
             className="text-3xl font-extrabold tracking-tight text-slate-900 lg:text-4xl"
           >
             Liderlik Tablosu
-          </motion.h1>
-          <motion.p
+          </m.h1>
+          <m.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
             className="mt-2 text-slate-500"
           >
             XP kazanarak sıralamada yüksel — ödev tamamla, quiz çöz, ders al.
-          </motion.p>
+          </m.p>
 
           {/* Stats row */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -399,7 +399,7 @@ export default function LiderlikPage() {
                 <span className="text-sm font-semibold text-slate-700">Sıranız: #{currentRank}</span>
               </div>
             )}
-          </motion.div>
+          </m.div>
         </div>
       </div>
 
@@ -468,7 +468,7 @@ export default function LiderlikPage() {
                         : "bg-sky-50 text-sky-700";
 
                       return (
-                        <motion.div
+                        <m.div
                           key={entry.id}
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -525,7 +525,7 @@ export default function LiderlikPage() {
                           {/* Mini XP bar (desktop only) */}
                           <div className="hidden w-20 shrink-0 md:block">
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                              <motion.div
+                              <m.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${pct}%` }}
                                 transition={{ duration: 0.8, delay: Math.min(i * 0.04, 0.4) + 0.2 }}
@@ -533,7 +533,7 @@ export default function LiderlikPage() {
                               />
                             </div>
                           </div>
-                        </motion.div>
+                        </m.div>
                       );
                     })}
                   </AnimatePresence>

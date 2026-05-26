@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 
@@ -34,7 +34,7 @@ type Props = {
 
 function Spinner() {
   return (
-    <motion.span
+    <m.span
       aria-hidden
       animate={{ rotate: 360 }}
       transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -114,7 +114,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
     try {
       const { data, error } = await supabase.rpc("create_quiz_with_questions", {
         p_title: title.trim(),
-        p_description: description.trim() || null,
+        p_description: description.trim() || "",
         p_questions: questions.map((q, i) => ({
           question_text: q.question_text.trim(),
           options: q.options.map((o) => o.trim()),
@@ -135,7 +135,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -145,7 +145,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 p-4 backdrop-blur-sm"
         >
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 16 }}
@@ -213,7 +213,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
 
                   <AnimatePresence initial={false}>
                     {questions.map((q, idx) => (
-                      <motion.div
+                      <m.div
                         key={q.uid}
                         layout
                         initial={{ opacity: 0, y: 16, height: 0 }}
@@ -293,11 +293,11 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
                             })}
                           </div>
                         </div>
-                      </motion.div>
+                      </m.div>
                     ))}
                   </AnimatePresence>
 
-                  <motion.button
+                  <m.button
                     type="button"
                     onClick={addQuestion}
                     whileTap={{ scale: 0.98 }}
@@ -305,7 +305,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
                   >
                     <span aria-hidden>＋</span>
                     Yeni Soru Ekle
-                  </motion.button>
+                  </m.button>
                 </div>
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
               >
                 İptal
               </button>
-              <motion.button
+              <m.button
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
@@ -328,10 +328,10 @@ export default function QuizOlusturucu({ open, onClose, defaultTitle, onSaved }:
               >
                 {saving && <Spinner />}
                 {saving ? "Kaydediliyor..." : "Quiz'i Kaydet"}
-              </motion.button>
+              </m.button>
             </footer>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

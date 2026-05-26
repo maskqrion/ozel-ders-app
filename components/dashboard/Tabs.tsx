@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useState, useTransition, type ReactNode } from "react";
 
 export type TabDef = {
@@ -51,7 +51,7 @@ export default function Tabs({
               }`}
             >
               {isActive && (
-                <motion.span
+                <m.span
                   layoutId="activeTabIndicator"
                   className={`absolute inset-0 rounded-lg ${a.indicator}`}
                   transition={{ type: "spring", stiffness: 380, damping: 32 }}
@@ -67,7 +67,7 @@ export default function Tabs({
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div
+        <m.div
           key={active.id}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: isPending ? 0.6 : 1, y: 0 }}
@@ -75,7 +75,7 @@ export default function Tabs({
           transition={{ duration: 0.2 }}
         >
           {active.content}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
     </div>
   );

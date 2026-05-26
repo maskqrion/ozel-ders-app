@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
@@ -20,7 +20,7 @@ const ArchitectureGraph = dynamic(
   }
 );
 
-// ── Framer Motion Variants ─────────────────────────────────────────────────
+// ── Framer m Variants ─────────────────────────────────────────────────
 const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 const grid = {
@@ -677,7 +677,7 @@ function SidebarDemoInline() {
         {/* Logo + links */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Logo mark */}
-          <motion.div
+          <m.div
             className="flex items-center gap-2 mb-8 px-2"
             animate={{ opacity: 1 }}
           >
@@ -686,7 +686,7 @@ function SidebarDemoInline() {
               className="shrink-0 inline-flex h-5 w-6 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm"
               style={{ background: "#dc5000" }}
             />
-            <motion.span
+            <m.span
               initial={{ opacity: 0 }}
               animate={{ opacity: open ? 1 : 0 }}
               transition={{ duration: 0.18 }}
@@ -699,8 +699,8 @@ function SidebarDemoInline() {
               }}
             >
               ORYZO
-            </motion.span>
-          </motion.div>
+            </m.span>
+          </m.div>
 
           {/* Nav links */}
           <div className="flex flex-col gap-1">
@@ -858,7 +858,7 @@ function XPRing({
             strokeWidth={10}
           />
           {/* Progress */}
-          <motion.circle
+          <m.circle
             cx="65" cy="65" r={r}
             fill="none"
             stroke="#dc5000"
@@ -896,7 +896,7 @@ function XPRing({
           className="h-1 w-full overflow-hidden rounded-full"
           style={{ background: "rgba(255,237,215,0.06)" }}
         >
-          <motion.div
+          <m.div
             className="h-full rounded-full"
             style={{ background: "linear-gradient(90deg, #dc5000, #ff7a38)" }}
             initial={{ width: 0 }}
@@ -958,7 +958,7 @@ export default function SandboxPage() {
       <div className="mx-auto max-w-[1100px] px-6 py-8 flex flex-col min-h-screen">
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <motion.header
+        <m.header
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: EASE }}
@@ -982,10 +982,10 @@ export default function SandboxPage() {
             />
             <span className="text-caption text-grey-brown">20 Mayıs 2026, Çarşamba</span>
           </div>
-        </motion.header>
+        </m.header>
 
         {/* ── Bento Grid ─────────────────────────────────────────────────── */}
-        <motion.div
+        <m.div
           variants={grid}
           initial="hidden"
           animate="show"
@@ -997,7 +997,7 @@ export default function SandboxPage() {
         >
 
           {/* ┌── Card 1: Cüzdan (col-span-2) ─────────────────────────────┐ */}
-          <motion.div
+          <m.div
             variants={tile}
             className="col-span-2 rounded-card p-6 flex flex-col justify-between overflow-hidden relative"
             style={{
@@ -1068,10 +1068,10 @@ export default function SandboxPage() {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </m.div>
 
           {/* ┌── Card 2: XP & Seviye (row-span-2) ───────────────────────┐ */}
-          <motion.div
+          <m.div
             variants={tile}
             className="row-span-2 rounded-card p-6 flex flex-col"
             style={{
@@ -1133,10 +1133,10 @@ export default function SandboxPage() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* ┌── Card 3: Yaklaşan Dersler ────────────────────────────────┐ */}
-          <motion.div
+          <m.div
             variants={tile}
             className="rounded-card p-6 flex flex-col overflow-hidden"
             style={{
@@ -1155,7 +1155,7 @@ export default function SandboxPage() {
 
             <ul className="space-y-2 flex-1">
               {LESSONS.map((l) => (
-                <motion.li
+                <m.li
                   key={`${l.subject}-${l.time}`}
                   whileHover={{ x: 3 }}
                   transition={{ type: "spring", stiffness: 400, damping: 28 }}
@@ -1195,7 +1195,7 @@ export default function SandboxPage() {
                     </div>
                     <p className="text-caption text-grey-brown mt-0.5">{l.day}</p>
                   </div>
-                </motion.li>
+                </m.li>
               ))}
             </ul>
 
@@ -1211,10 +1211,10 @@ export default function SandboxPage() {
             >
               Tüm dersleri gör →
             </button>
-          </motion.div>
+          </m.div>
 
           {/* ┌── Card 4: Hızlı İşlemler ──────────────────────────────────┐ */}
-          <motion.div
+          <m.div
             variants={tile}
             className="rounded-card p-6 flex flex-col justify-between"
             style={{
@@ -1228,7 +1228,7 @@ export default function SandboxPage() {
 
             <div className="flex flex-col gap-2.5 mt-5">
               {/* Primary: Ders Bul — filled dark-cork pill */}
-              <motion.button
+              <m.button
                 type="button"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
@@ -1241,10 +1241,10 @@ export default function SandboxPage() {
               >
                 <ISearch />
                 <span>Ders Bul</span>
-              </motion.button>
+              </m.button>
 
               {/* Secondary: Bakiye Yükle — ghost rounded pill */}
-              <motion.button
+              <m.button
                 type="button"
                 whileHover={{ borderColor: "#dc5000", color: "#dc5000" }}
                 whileTap={{ scale: 0.97 }}
@@ -1257,7 +1257,7 @@ export default function SandboxPage() {
               >
                 <IPlus />
                 <span>Bakiye Yükle</span>
-              </motion.button>
+              </m.button>
 
               {/* Tertiary: flat ghost text */}
               <button
@@ -1283,12 +1283,12 @@ export default function SandboxPage() {
                 <span className="text-warm-cream">3s 20dk</span> kaldı.
               </p>
             </div>
-          </motion.div>
+          </m.div>
 
-        </motion.div>
+        </m.div>
 
         {/* ── Architecture Graph ─────────────────────────────────────────── */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.4 }}
@@ -1338,10 +1338,10 @@ export default function SandboxPage() {
           <div className="flex-1 min-h-0">
             <ArchitectureGraph />
           </div>
-        </motion.section>
+        </m.section>
 
         {/* ── Sidebar Showcase ───────────────────────────────────────────── */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.55 }}
@@ -1370,10 +1370,10 @@ export default function SandboxPage() {
           >
             <SidebarDemoInline />
           </div>
-        </motion.section>
+        </m.section>
 
         {/* ── Tabs Showcase ──────────────────────────────────────────────── */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.65 }}
@@ -1394,10 +1394,10 @@ export default function SandboxPage() {
           >
             <OzelDersTabs />
           </div>
-        </motion.section>
+        </m.section>
 
         {/* ── Card Spotlight Showcase ────────────────────────────────────── */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.7 }}
@@ -1441,10 +1441,10 @@ export default function SandboxPage() {
               biyografi="Cambridge sertifikalı · IELTS 8.5"
             />
           </div>
-        </motion.section>
+        </m.section>
 
         {/* ── Timeline Showcase ──────────────────────────────────────────── */}
-        <motion.section
+        <m.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: EASE, delay: 0.75 }}
@@ -1461,10 +1461,10 @@ export default function SandboxPage() {
           </div>
 
           <OzelDersTimeline />
-        </motion.section>
+        </m.section>
 
         {/* ── Footer note ────────────────────────────────────────────────── */}
-        <motion.footer
+        <m.footer
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.5 }}
@@ -1476,7 +1476,7 @@ export default function SandboxPage() {
           <p className="text-caption text-grey-brown">
             bg-studio-black · text-warm-cream · text-burnt-sienna · rounded-card
           </p>
-        </motion.footer>
+        </m.footer>
 
       </div>
     </div>

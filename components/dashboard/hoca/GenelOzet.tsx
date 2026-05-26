@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 
@@ -206,7 +206,7 @@ function StatCard({
   const cfg = TONE[tone];
   const spot = SPOTLIGHT[tone];
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: delay / 1000 }}
@@ -237,7 +237,7 @@ function StatCard({
 
         <Sparkline data={data} stroke={cfg.stroke} fill={cfg.fill} />
       </CardSpotlight>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -356,7 +356,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
       {/* ═══════════════════════════════════════════════════════
           LEVEL HERO  — XP / greeting card
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
@@ -444,7 +444,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
                     />
                   ))}
                 </div>
-                <motion.div
+                <m.div
                   initial={{ width: 0 }}
                   animate={{ width: `${xpPct}%` }}
                   transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
@@ -458,7 +458,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
                   <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 h-5 w-5 rounded-full bg-white border-2 border-emerald-500 grid place-items-center shadow-sm">
                     <Zap size={9} strokeWidth={3} className="text-emerald-600" />
                   </div>
-                </motion.div>
+                </m.div>
               </div>
 
               <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-slate-500">
@@ -512,7 +512,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
             </div>
           </div>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* ═══════════════════════════════════════════════════════
           STAT GRID  — real data from ogrenciler / odevler
@@ -558,7 +558,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
       {/* ═══════════════════════════════════════════════════════
           DAVET KARTI  — preserved Supabase invite logic
           ═══════════════════════════════════════════════════════ */}
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.3 }}
@@ -596,7 +596,7 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
 
         <AnimatePresence>
           {inviteLink && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
@@ -618,17 +618,17 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
                 <Copy size={14} />
                 Kopyala
               </button>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </m.div>
 
       {/* ═══════════════════════════════════════════════════════
           TWO-COLUMN  — Ödev grafiği  +  Değerlendirmeler
           ═══════════════════════════════════════════════════════ */}
       <div className="grid lg:grid-cols-5 gap-6">
         {/* Ödev Durum Grafiği — recharts BarChart preserved */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.38 }}
@@ -641,17 +641,17 @@ export default function GenelOzet({ ogrenciler, odevler }: Props) {
           <div className="w-full h-[300px] min-h-[300px] overflow-hidden">
             <OdevDurumGrafigi data={odevDurumGrafigi} />
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Öğrenci Değerlendirmeleri — preserved component */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.44 }}
           className="lg:col-span-3"
         >
           <OgrenciDegerlendirmeleri hocaId={hocaId} />
-        </motion.div>
+        </m.div>
       </div>
     </div>
   );

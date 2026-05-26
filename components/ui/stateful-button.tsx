@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type State = "idle" | "loading" | "success" | "error";
@@ -55,7 +55,7 @@ export function StatefulButton({
         : "bg-slate-800 border-slate-900 hover:bg-slate-900";
 
   return (
-    <motion.button
+    <m.button
       type="button"
       onClick={handle}
       disabled={state !== "idle" || disabled}
@@ -68,7 +68,7 @@ export function StatefulButton({
     >
       <AnimatePresence mode="wait" initial={false}>
         {state === "loading" ? (
-          <motion.span
+          <m.span
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -76,16 +76,16 @@ export function StatefulButton({
             className="flex items-center justify-center gap-2"
           >
             {[0, 1, 2].map((i) => (
-              <motion.span
+              <m.span
                 key={i}
                 animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1, ease: "easeInOut" }}
                 className="block h-1.5 w-1.5 rounded-full bg-white"
               />
             ))}
-          </motion.span>
+          </m.span>
         ) : (
-          <motion.span
+          <m.span
             key="label"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -99,9 +99,9 @@ export function StatefulButton({
               </svg>
             )}
             {label}
-          </motion.span>
+          </m.span>
         )}
       </AnimatePresence>
-    </motion.button>
+    </m.button>
   );
 }

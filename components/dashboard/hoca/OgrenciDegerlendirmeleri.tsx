@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
 import StarRating from "@/components/dashboard/shared/StarRating";
 
@@ -71,7 +71,7 @@ export default function OgrenciDegerlendirmeleri({ hocaId }: Props) {
       : 0;
 
   return (
-    <motion.section
+    <m.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: 0.2 }}
@@ -123,7 +123,7 @@ export default function OgrenciDegerlendirmeleri({ hocaId }: Props) {
               const ad = r.ogrenci?.full_name || r.ogrenci?.email || "Öğrenci";
               const email = r.ogrenci?.email ?? "";
               return (
-                <motion.li
+                <m.li
                   key={r.id}
                   layout
                   initial={{ opacity: 0, y: 10 }}
@@ -153,12 +153,12 @@ export default function OgrenciDegerlendirmeleri({ hocaId }: Props) {
                       </p>
                     )}
                   </div>
-                </motion.li>
+                </m.li>
               );
             })}
           </AnimatePresence>
         </ul>
       )}
-    </motion.section>
+    </m.section>
   );
 }

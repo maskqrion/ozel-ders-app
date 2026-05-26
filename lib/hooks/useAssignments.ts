@@ -49,7 +49,22 @@ export function useUpdateAssignmentStatus() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, status, rejectionReason, score }) => {
+      await queryClient.cancelQueries({ queryKey: ["assignments"] });
+      const cachedQueries = queryClient.getQueriesData<Assignment[]>({ queryKey: ["assignments"] });
+      queryClient.setQueriesData<Assignment[]>({ queryKey: ["assignments"] }, (old) =>
+        old?.map((a) =>
+          a.id === id
+            ? { ...a, status, rejection_reason: rejectionReason ?? null, score: score ?? null }
+            : a
+        ) ?? []
+      );
+      return { cachedQueries };
+    },
+    onError: (_err, _vars, context) => {
+      context?.cachedQueries.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },

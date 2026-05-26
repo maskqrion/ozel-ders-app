@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { XP_PER_LEVEL } from "@/lib/constants";
 
@@ -65,7 +65,7 @@ export default function LevelProgressBar({
   const colors = accentMap[accent];
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -100,25 +100,25 @@ export default function LevelProgressBar({
         aria-valuemax={XP_PER_LEVEL}
         aria-label={`Seviye ${safeLevel} ilerlemesi`}
       >
-        <motion.div
+        <m.div
           initial={{ width: 0 }}
           animate={{ width: `${percent}%` }}
           transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className={`relative h-full overflow-hidden rounded-full bg-gradient-to-r ${colors.barFrom} ${colors.barTo}`}
         >
-          <motion.span
+          <m.span
             aria-hidden
             initial={{ x: "-120%" }}
             animate={{ x: "220%" }}
             transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
             className="absolute inset-y-0 left-0 block h-full w-1/3 bg-white/40 blur-md"
           />
-        </motion.div>
+        </m.div>
       </div>
 
       <p className="mt-2 text-[11px] text-slate-400">
         {xpInLevel.toLocaleString("tr-TR")} / {XP_PER_LEVEL.toLocaleString("tr-TR")} XP
       </p>
-    </motion.div>
+    </m.div>
   );
 }

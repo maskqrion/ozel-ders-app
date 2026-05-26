@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import { XP_PER_LEVEL } from './LevelProgressBar';
 
@@ -96,7 +96,7 @@ function PodiumCard({
   const lv  = user.level ?? 1;
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 56 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, delay: colDelay, ease: [0.22, 1, 0.36, 1] }}
@@ -104,14 +104,14 @@ function PodiumCard({
     >
       {/* Crown */}
       {p.crown ? (
-        <motion.span
+        <m.span
           aria-label="1. sıra"
           animate={{ opacity: [0.6, 1, 0.6], y: [0, -3, 0] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
           className="text-2xl leading-none"
         >
           👑
-        </motion.span>
+        </m.span>
       ) : (
         <div className="h-8" aria-hidden />
       )}
@@ -126,7 +126,7 @@ function PodiumCard({
           {initials(user.full_name, user.id)}
         </div>
         {p.crown && (
-          <motion.span
+          <m.span
             className="absolute inset-0 rounded-full"
             style={{ boxShadow: '0 0 20px rgba(251,191,36,.5)' }}
             animate={{ opacity: [0.3, 0.8, 0.3] }}
@@ -159,7 +159,7 @@ function PodiumCard({
       >
         <span className={`text-3xl font-black tabular-nums ${p.label}`}>{rank + 1}</span>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -262,7 +262,7 @@ export default function LiderlikTablosu() {
       }}
     >
       {/* Ambient aurora glow */}
-      <motion.div
+      <m.div
         className="pointer-events-none absolute -top-32 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full"
         style={{
           background: 'radial-gradient(circle, rgba(16,185,129,.18) 0%, transparent 68%)',
@@ -301,27 +301,27 @@ export default function LiderlikTablosu() {
         {/* ── Content ────────────────────────────────────────────────── */}
         <AnimatePresence mode="wait">
           {loading ? (
-            <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <m.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Skeleton />
-            </motion.div>
+            </m.div>
           ) : error ? (
-            <motion.div
+            <m.div
               key="error"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="py-16 text-center text-sm text-white/40"
             >
               {error}
-            </motion.div>
+            </m.div>
           ) : users.length === 0 ? (
-            <motion.div
+            <m.div
               key="empty"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="py-16 text-center text-sm text-white/40"
             >
               Bu kategoride henüz kullanıcı yok
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <m.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Podium */}
               {top3.length > 0 && (
                 <div className="mb-8 flex items-end justify-center gap-2 sm:gap-4 pt-4">
@@ -360,7 +360,7 @@ export default function LiderlikTablosu() {
                   const pct    = Math.min(100, Math.round((xpInLv / XP_PER_LEVEL) * 100));
 
                   return (
-                    <motion.li
+                    <m.li
                       key={user.id}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -397,7 +397,7 @@ export default function LiderlikTablosu() {
                           )}
                         </div>
                         <div className="mt-1.5 h-1 w-full max-w-[120px] overflow-hidden rounded-full bg-white/8">
-                          <motion.div
+                          <m.div
                             initial={{ width: 0 }}
                             animate={{ width: `${pct}%` }}
                             transition={{ duration: 0.75, delay: i * 0.048 + 0.18, ease: 'easeOut' }}
@@ -413,11 +413,11 @@ export default function LiderlikTablosu() {
                         </p>
                         <p className="text-[10px] tabular-nums text-white/28">Lv {lv}</p>
                       </div>
-                    </motion.li>
+                    </m.li>
                   );
                 })}
               </ul>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

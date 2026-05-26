@@ -31,7 +31,9 @@
       "Bash(dir /s /b \"C:\\\\ozel-ders-app\\\\app\\\\*.tsx\")",
       "Bash(findstr \"\\\\[\")",
       "Bash(Remove-Item -Recurse -Force \"C:\\\\ozel-ders-app\\\\.next\" -ErrorAction SilentlyContinue)",
-      "Bash(Write-Output \"done\")"
+      "Bash(Write-Output \"done\")",
+      "Bash(Get-ChildItem \"C:\\\\ozel-ders-app\\\\supabase\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -First 20)"
     ]
   }
 }

@@ -36,7 +36,18 @@ export function useUpdateLessonStatus() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["lessons"] });
+      const cachedQueries = queryClient.getQueriesData<Lesson[]>({ queryKey: ["lessons"] });
+      queryClient.setQueriesData<Lesson[]>({ queryKey: ["lessons"] }, (old) =>
+        old?.map((lesson) => lesson.id === id ? { ...lesson, status } : lesson) ?? []
+      );
+      return { cachedQueries };
+    },
+    onError: (_err, _vars, context) => {
+      context?.cachedQueries.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },

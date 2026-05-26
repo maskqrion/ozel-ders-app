@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  motion,
+  m,
   useScroll,
   useTransform,
 } from "framer-motion";
@@ -56,7 +56,7 @@ export function Timeline({ data }: { data: TimelineEntry[] }) {
         aria-hidden
       >
         {/* Scroll-driven burnt-sienna fill — no gradient, pure #dc5000 */}
-        <motion.div
+        <m.div
           className="absolute inset-x-0 top-0 w-full origin-top"
           style={{
             height: fillHeight,
@@ -115,7 +115,7 @@ function TimelineRow({ entry, idx }: { entry: TimelineEntry; idx: number }) {
         />
 
         {/* Title — large warm-cream */}
-        <motion.p
+        <m.p
           style={{ opacity: rowOpacity }}
           className="pl-8 pt-0 leading-none"
         >
@@ -132,16 +132,16 @@ function TimelineRow({ entry, idx }: { entry: TimelineEntry; idx: number }) {
           >
             {entry.title}
           </span>
-        </motion.p>
+        </m.p>
       </div>
 
       {/* ── Right column: animated content ──────────────────────────── */}
-      <motion.div
+      <m.div
         className="flex-1 pt-1 min-w-0"
         style={{ opacity: rowOpacity, y: rowY }}
       >
         {entry.content}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

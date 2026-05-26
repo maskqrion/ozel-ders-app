@@ -1,15 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import LessonsCalendar from "@/components/LessonsCalendar";
 import { supabase } from "@/lib/supabase/client";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useLessons, useUpdateLessonStatus } from "@/lib/hooks/useLessons";
 import type { UserProfile } from "@/lib/types";
+
+const LessonsCalendar = dynamic(() => import("@/components/LessonsCalendar"), {
+  ssr: false,
+  loading: () => <LoadingSpinner />,
+});
 
 type Props = {
   ogrenciler: UserProfile[];
@@ -74,7 +79,7 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
@@ -108,9 +113,9 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
             {dersLoading ? "Planlanıyor..." : "Dersi Planla"}
           </button>
         </form>
-      </motion.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, delay: 0.05 }}
@@ -128,7 +133,7 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
           <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
             <AnimatePresence initial={false}>
               {seciliGunDersleri.length === 0 && selectedDate && (
-                <motion.p
+                <m.p
                   key="empty"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -136,10 +141,10 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
                   className="text-sm text-slate-400"
                 >
                   Planlı ders yok.
-                </motion.p>
+                </m.p>
               )}
               {seciliGunDersleri.map((d) => (
-                <motion.div
+                <m.div
                   key={d.id}
                   layout
                   initial={{ opacity: 0, y: 6 }}
@@ -175,12 +180,12 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
                       </button>
                     )}
                   </div>
-                </motion.div>
+                </m.div>
               ))}
             </AnimatePresence>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

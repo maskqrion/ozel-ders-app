@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface LoaderOneProps {
@@ -17,7 +17,7 @@ export function LoaderOne({ className, color = "#3b82f6", size = 40 }: LoaderOne
       aria-label="Yükleniyor"
     >
       {[0, 1, 2].map((i) => (
-        <motion.span
+        <m.span
           key={i}
           animate={{ y: [0, -size * 0.35, 0], opacity: [0.5, 1, 0.5] }}
           transition={{
@@ -47,7 +47,7 @@ interface LoaderRingProps {
 
 export function LoaderRing({ className, color = "#3b82f6", size = 36 }: LoaderRingProps) {
   return (
-    <motion.div
+    <m.div
       animate={{ rotate: 360 }}
       transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
       style={{

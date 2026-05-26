@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState, useTransition } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase/client";
+import { submitReview } from "@/app/actions/reviews";
 import StarRating from "@/components/dashboard/shared/StarRating";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 
 function Spinner() {
   return (
-    <motion.span
+    <m.span
       aria-hidden
       animate={{ rotate: 360 }}
       transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -44,14 +44,13 @@ export default function HocayiDegerlendirModal({
 }: Props) {
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>("");
-  const [saving, setSaving] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   // Modal her açıldığında temizle
   useEffect(() => {
     if (open) {
       setRating(5);
       setComment("");
-      setSaving(false);
     }
   }, [open]);
 
@@ -59,58 +58,48 @@ export default function HocayiDegerlendirModal({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !saving) onClose();
+      if (e.key === "Escape" && !isPending) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, saving]);
+  }, [open, onClose, isPending]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (rating < 1 || rating > 5) {
       toast.error("Lütfen 1-5 arası bir puan seçin.");
       return;
     }
-    setSaving(true);
-    try {
+    startTransition(async () => {
       const trimmed = comment.trim();
-      const { error } = await supabase.from("reviews").insert([
-        {
-          hoca_id: hocaId,
-          ogrenci_id: ogrenciId,
-          rating,
-          comment: trimmed || null,
-        },
-      ]);
-      if (error) throw error;
+      const result = await submitReview(hocaId, rating, trimmed || null);
+      if (result.duplicate) {
+        toast.error("Bu hocayı zaten değerlendirmişsiniz.");
+        return;
+      }
+      if (result.error) {
+        toast.error("Değerlendirme kaydedilemedi: " + result.error);
+        return;
+      }
       toast.success("Değerlendirmeniz kaydedildi.");
       await onSaved();
       onClose();
-    } catch (err: any) {
-      // 23505 = unique_violation → aynı hocaya tekrar yorum
-      if (err?.code === "23505") {
-        toast.error("Bu hocayı zaten değerlendirmişsiniz.");
-      } else {
-        toast.error("Değerlendirme kaydedilemedi: " + (err?.message ?? ""));
-      }
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           onClick={(e) => {
-            if (e.target === e.currentTarget && !saving) onClose();
+            if (e.target === e.currentTarget && !isPending) onClose();
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-white/60 p-4 backdrop-blur-sm"
         >
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.96, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 14 }}
@@ -131,7 +120,7 @@ export default function HocayiDegerlendirModal({
               </div>
               <button
                 onClick={onClose}
-                disabled={saving}
+                disabled={isPending}
                 aria-label="Kapat"
                 className="rounded-full bg-white p-2 text-slate-500 shadow-sm ring-1 ring-slate-100 transition hover:bg-slate-50 disabled:opacity-50"
               >
@@ -145,7 +134,7 @@ export default function HocayiDegerlendirModal({
                   Hocanızı nasıl değerlendirirsiniz?
                 </p>
                 <StarRating value={rating} onChange={setRating} size="lg" />
-                <motion.p
+                <m.p
                   key={rating}
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -153,7 +142,7 @@ export default function HocayiDegerlendirModal({
                   className="text-sm font-medium text-amber-700"
                 >
                   {RATING_LABEL[rating]}
-                </motion.p>
+                </m.p>
               </div>
 
               <div className="mt-5">
@@ -174,24 +163,24 @@ export default function HocayiDegerlendirModal({
               <button
                 type="button"
                 onClick={onClose}
-                disabled={saving}
+                disabled={isPending}
                 className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 İptal
               </button>
-              <motion.button
+              <m.button
                 type="button"
                 onClick={handleSave}
-                disabled={saving}
+                disabled={isPending}
                 whileTap={{ scale: 0.97 }}
                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-sky-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-600 hover:to-sky-600 disabled:opacity-70"
               >
-                {saving && <Spinner />}
-                {saving ? "Kaydediliyor..." : "Değerlendirmeyi Gönder"}
-              </motion.button>
+                {isPending && <Spinner />}
+                {isPending ? "Kaydediliyor..." : "Değerlendirmeyi Gönder"}
+              </m.button>
             </footer>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

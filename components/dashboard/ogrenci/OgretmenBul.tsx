@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import HocayiDegerlendirModal from "@/components/dashboard/ogrenci/HocayiDegerlendirModal";
@@ -283,7 +283,7 @@ function BudgetDropdown({
 
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
@@ -310,7 +310,7 @@ function BudgetDropdown({
                 )}
               </button>
             ))}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -358,7 +358,7 @@ function SortMenu({
 
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
@@ -385,7 +385,7 @@ function SortMenu({
                 )}
               </button>
             ))}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -426,7 +426,7 @@ function SkeletonCard() {
    ============================================================ */
 function EmptyState({ onClear }: { onClear: () => void }) {
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className="col-span-full flex flex-col items-center justify-center py-24 text-center"
@@ -448,7 +448,7 @@ function EmptyState({ onClear }: { onClear: () => void }) {
         <IX size={14} sw={2.5} />
         Filtreleri temizle
       </button>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -480,7 +480,7 @@ function HocaCard({
   const isSuperHoca = stat && stat.avg >= 4.8 && stat.count >= 5;
 
   return (
-    <motion.article
+    <m.article
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -639,7 +639,7 @@ function HocaCard({
               )}
             </div>
           </div>
-          <motion.button
+          <m.button
             type="button"
             onClick={() => onDersTalep(h)}
             whileHover={{ scale: 1.04 }}
@@ -652,7 +652,7 @@ function HocaCard({
           >
             Ders Talep Et
             <IArrow size={13} sw={2.5} />
-          </motion.button>
+          </m.button>
         </div>
 
         {/* Profili İncele */}
@@ -710,7 +710,7 @@ function HocaCard({
           )}
         </div>
       </div>
-    </motion.article>
+    </m.article>
   );
 }
 
@@ -927,7 +927,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
         </div>
 
         {/* Badge + Heading */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -963,10 +963,10 @@ export default function OgretmenBul({ currentUserId }: Props) {
           <p className="mt-3 text-sm text-white/35 max-w-md mx-auto">
             Doğrulanmış eğitmenler arasından uzmanlık alanı veya isme göre saniyeler içinde keşfet.
           </p>
-        </motion.div>
+        </m.div>
 
         {/* Search bar */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
@@ -1010,10 +1010,10 @@ export default function OgretmenBul({ currentUserId }: Props) {
             <div className="h-6 w-px bg-white/[0.08] shrink-0" />
             <BudgetDropdown value={budgetFilter} onChange={setBudgetFilter} />
           </form>
-        </motion.div>
+        </m.div>
 
         {/* Subject pill filters */}
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
@@ -1029,7 +1029,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
                 className="relative px-4 py-1.5 rounded-full text-sm font-semibold transition-colors duration-150"
               >
                 {isActive && (
-                  <motion.span
+                  <m.span
                     layoutId="subject-pill-active"
                     className="absolute inset-0 rounded-full border border-emerald-400/40 bg-emerald-500/15"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -1047,7 +1047,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
               </button>
             );
           })}
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Thin divider */}
@@ -1056,7 +1056,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
       {/* Results bar */}
       <AnimatePresence>
         {!loading && searched && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1082,7 +1082,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
               )}
               <SortMenu value={sortBy} onChange={setSortBy} />
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -1090,7 +1090,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
       <div className="px-6 pb-8 pt-1">
         <AnimatePresence mode="wait">
           {loading ? (
-            <motion.div
+            <m.div
               key="skel"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1100,9 +1100,9 @@ export default function OgretmenBul({ currentUserId }: Props) {
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <SkeletonCard key={i} />
               ))}
-            </motion.div>
+            </m.div>
           ) : filteredHocalar.length === 0 && searched ? (
-            <motion.div
+            <m.div
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1110,9 +1110,9 @@ export default function OgretmenBul({ currentUserId }: Props) {
               className="grid grid-cols-1"
             >
               <EmptyState onClear={temizle} />
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="grid"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1133,7 +1133,7 @@ export default function OgretmenBul({ currentUserId }: Props) {
                   onVideoOpen={setVideoTarget}
                 />
               ))}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

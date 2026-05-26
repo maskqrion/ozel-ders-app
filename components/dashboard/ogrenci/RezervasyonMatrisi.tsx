@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 
@@ -185,7 +185,7 @@ function DayStrip({
             const isToday = d.toDateString() === new Date().toDateString();
             const avail = dayAvailableCounts[i] ?? 0;
             return (
-              <motion.button
+              <m.button
                 key={i}
                 onClick={() => setSelectedDayIdx(i)}
                 whileTap={{ scale: 0.95 }}
@@ -196,7 +196,7 @@ function DayStrip({
                 }`}
               >
                 {active && (
-                  <motion.div
+                  <m.div
                     layoutId="day-active-bg"
                     className="absolute inset-0 rounded-2xl"
                     style={{
@@ -236,7 +236,7 @@ function DayStrip({
                     <span className="text-[10px] font-bold text-emerald-400/80">{avail}</span>
                   </div>
                 </div>
-              </motion.button>
+              </m.button>
             );
           })}
         </div>
@@ -267,7 +267,7 @@ function TimePill({
   }
 
   return (
-    <motion.button
+    <m.button
       onClick={onClick}
       whileHover={{
         scale: 1.05,
@@ -279,7 +279,7 @@ function TimePill({
       className="h-10 min-w-[76px] px-4 rounded-xl border border-emerald-500/[0.22] bg-emerald-500/[0.07] text-emerald-300 text-sm font-semibold inline-flex items-center justify-center cursor-pointer select-none transition-colors hover:bg-emerald-500/[0.12]"
     >
       {time}
-    </motion.button>
+    </m.button>
   );
 }
 
@@ -353,7 +353,7 @@ function ConfirmModal({
   return (
     <>
       {/* Confirmation backdrop — z-[55] blurs the outer modal */}
-      <motion.div
+      <m.div
         key="confirm-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -365,7 +365,7 @@ function ConfirmModal({
       />
 
       {/* Confirmation panel */}
-      <motion.div
+      <m.div
         key="confirm-panel"
         initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -472,7 +472,7 @@ function ConfirmModal({
           {/* Insufficient balance warning */}
           <AnimatePresence>
             {lowBalance && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
@@ -493,7 +493,7 @@ function ConfirmModal({
                     </p>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
@@ -509,7 +509,7 @@ function ConfirmModal({
                 <IArrow size={13} sw={2.5} />
               </a>
             ) : (
-              <motion.button
+              <m.button
                 onClick={onConfirm}
                 disabled={booking}
                 whileHover={!booking ? { scale: 1.02 } : undefined}
@@ -535,7 +535,7 @@ function ConfirmModal({
                     Dersi Onayla
                   </>
                 )}
-              </motion.button>
+              </m.button>
             )}
             <button
               onClick={onCancel}
@@ -546,7 +546,7 @@ function ConfirmModal({
             </button>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </>
   );
 }
@@ -740,7 +740,7 @@ export default function RezervasyonMatrisi({
       {open && hoca && (
         <>
           {/* Main backdrop */}
-          <motion.div
+          <m.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -752,7 +752,7 @@ export default function RezervasyonMatrisi({
           />
 
           {/* Main panel */}
-          <motion.div
+          <m.div
             key="panel"
             initial={{ opacity: 0, y: 48, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -983,7 +983,7 @@ export default function RezervasyonMatrisi({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* ── Confirmation modal (inner) ── */}
           <AnimatePresence>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function DesktopSidebar({
   const { open, setOpen, animate } = useSidebar();
 
   return (
-    <motion.div
+    <m.div
       className={cn(
         "hidden md:flex h-full flex-col px-4 py-5 shrink-0 overflow-hidden",
         className
@@ -98,7 +98,7 @@ function DesktopSidebar({
       onMouseLeave={() => setOpen(false)}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -139,7 +139,7 @@ function MobileSidebar({
 
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             initial={{ x: "-100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "-100%", opacity: 0 }}
@@ -164,7 +164,7 @@ function MobileSidebar({
               </svg>
             </button>
             {children}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -209,7 +209,7 @@ export function SidebarLink({ link, className }: SidebarLinkProps) {
       {/* Label — fades in when open */}
       <AnimatePresence>
         {(animate ? open : true) && (
-          <motion.span
+          <m.span
             initial={{ opacity: 0, width: 0 }}
             animate={{ opacity: 1, width: "auto" }}
             exit={{ opacity: 0, width: 0 }}
@@ -224,12 +224,12 @@ export function SidebarLink({ link, className }: SidebarLinkProps) {
             }}
           >
             {link.label}
-          </motion.span>
+          </m.span>
         )}
       </AnimatePresence>
 
       {/* Burnt-sienna hairline accent on hover — right edge */}
-      <motion.span
+      <m.span
         className="ml-auto shrink-0 h-4 w-px rounded-full opacity-0 group-hover/link:opacity-100 transition-opacity duration-200"
         style={{ background: "#dc5000" }}
         aria-hidden

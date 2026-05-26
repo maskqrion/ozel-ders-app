@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface GooeyInputProps {
@@ -59,13 +59,13 @@ export function GooeyInput({
           )}
         />
         {/* Right blob — merges with pill on focus */}
-        <motion.div
+        <m.div
           animate={{ scale: focused ? 1 : 0.05 }}
           transition={{ type: "spring", stiffness: 420, damping: 28 }}
           className="absolute -right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-blue-100"
         />
         {/* Smaller satellite blob */}
-        <motion.div
+        <m.div
           animate={{ scale: focused ? 1 : 0.05, x: focused ? -4 : 0 }}
           transition={{ type: "spring", stiffness: 360, damping: 26, delay: 0.05 }}
           className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-blue-100"

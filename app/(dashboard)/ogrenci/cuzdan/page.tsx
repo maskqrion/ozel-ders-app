@@ -3,20 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 
 /* ── Types ──────────────────────────────────────────────────── */
-type TxType   = "deposit" | "withdrawal" | "escrow_hold" | "escrow_release";
-type TxStatus = "pending" | "completed" | "failed";
+type TxType   = "bakiye_yukleme" | "dersten_kazanc" | "ders_odeme" | "iade";
+type TxStatus = "beklemede" | "tamamlandi" | "basarisiz";
 
 interface Transaction {
   id: string;
   amount: number;
   type: TxType;
   status: TxStatus;
-  reference_lesson_id: string | null;
+  wallet_id: string;
+  description: string | null;
   created_at: string;
 }
 
@@ -158,19 +159,19 @@ const TX_CFG: Record<
   TxType,
   { label: string; sign: "+" | "-"; amountCls: string; iconBg: string; iconCls: string; Icon: (p: IconProps) => React.JSX.Element }
 > = {
-  deposit:        { label: "Para Yatırma",      sign: "+", amountCls: "text-emerald-600 font-bold", iconBg: "bg-emerald-50", iconCls: "text-emerald-500", Icon: ArrowDownIcon  },
-  withdrawal:     { label: "Para Çekme",         sign: "-", amountCls: "text-rose-600 font-bold",    iconBg: "bg-rose-50",    iconCls: "text-rose-500",    Icon: ArrowUpIcon    },
-  escrow_hold:    { label: "Escrow Beklemede",   sign: "-", amountCls: "text-amber-600 font-bold",   iconBg: "bg-amber-50",   iconCls: "text-amber-500",   Icon: LockIcon       },
-  escrow_release: { label: "Escrow Serbest",     sign: "+", amountCls: "text-sky-600 font-bold",     iconBg: "bg-sky-50",     iconCls: "text-sky-500",     Icon: UnlockIcon     },
+  bakiye_yukleme:  { label: "Bakiye Yükleme",    sign: "+", amountCls: "text-emerald-600 font-bold", iconBg: "bg-emerald-50", iconCls: "text-emerald-500", Icon: ArrowDownIcon  },
+  ders_odeme:      { label: "Ders Ödemesi",       sign: "-", amountCls: "text-rose-600 font-bold",    iconBg: "bg-rose-50",    iconCls: "text-rose-500",    Icon: ArrowUpIcon    },
+  dersten_kazanc:  { label: "Ders Kazancı",       sign: "+", amountCls: "text-sky-600 font-bold",     iconBg: "bg-sky-50",     iconCls: "text-sky-500",     Icon: UnlockIcon     },
+  iade:            { label: "İade",               sign: "+", amountCls: "text-amber-600 font-bold",   iconBg: "bg-amber-50",   iconCls: "text-amber-500",   Icon: LockIcon       },
 };
 
 const STATUS_CFG: Record<
   TxStatus,
   { label: string; cls: string; Icon: (p: IconProps) => React.JSX.Element }
 > = {
-  completed: { label: "Tamamlandı", cls: "bg-emerald-50 text-emerald-700", Icon: CheckCircleIcon },
-  pending:   { label: "Beklemede",  cls: "bg-amber-50 text-amber-700",     Icon: ClockIcon       },
-  failed:    { label: "Başarısız",  cls: "bg-rose-50 text-rose-700",       Icon: XCircleIcon     },
+  tamamlandi: { label: "Tamamlandı", cls: "bg-emerald-50 text-emerald-700", Icon: CheckCircleIcon },
+  beklemede:  { label: "Beklemede",  cls: "bg-amber-50 text-amber-700",     Icon: ClockIcon       },
+  basarisiz:  { label: "Başarısız",  cls: "bg-rose-50 text-rose-700",       Icon: XCircleIcon     },
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -191,12 +192,12 @@ export default function CuzdanPage() {
   /* ── Fetch transactions only (used after deposit) ── */
   const fetchTransactions = useCallback(async (uid: string) => {
     const { data } = await supabase
-      .from("transactions")
-      .select("id, amount, type, status, reference_lesson_id, created_at")
-      .eq("user_id", uid)
+      .from("wallet_transactions")
+      .select("id, amount, type, status, wallet_id, description, created_at")
+      .eq("wallet_id", uid)
       .order("created_at", { ascending: false })
       .limit(30);
-    if (data) setTransactions(data as Transaction[]);
+    if (data) setTransactions(data as unknown as Transaction[]);
   }, []);
 
   /* ── Full data fetch (wallet + transactions) ── */
@@ -206,7 +207,7 @@ export default function CuzdanPage() {
         supabase
           .from("wallets")
           .select("balance, updated_at")
-          .eq("user_id", uid)
+          .eq("id", uid)
           .maybeSingle(),
         fetchTransactions(uid),
       ]);
@@ -214,17 +215,6 @@ export default function CuzdanPage() {
       if (walletRes.data) {
         setBalance(walletRes.data.balance as number);
         setUpdatedAt(walletRes.data.updated_at as string);
-      } else {
-        /* Wallet might not exist yet for legacy accounts — create it */
-        const { data: created } = await supabase
-          .from("wallets")
-          .insert({ user_id: uid, balance: 0 })
-          .select("balance, updated_at")
-          .single();
-        if (created) {
-          setBalance(created.balance as number);
-          setUpdatedAt(created.updated_at as string);
-        }
       }
     },
     [fetchTransactions],
@@ -261,25 +251,28 @@ export default function CuzdanPage() {
     if (depositing) return;
     setDepositing(true);
     try {
-      /* 1. Record transaction */
-      const { error: txErr } = await supabase
-        .from("transactions")
-        .insert({ user_id: userId, amount: rawAmount, type: "deposit", status: "completed" });
-      if (txErr) throw txErr;
-
-      /* 2. Get current balance and update atomically */
+      /* 1. Get current balance */
       const { data: current, error: fetchErr } = await supabase
         .from("wallets")
         .select("balance")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .maybeSingle();
       if (fetchErr) throw fetchErr;
 
       const newBalance = ((current?.balance as number) ?? 0) + rawAmount;
+
+      /* 2. Update balance */
       const { error: upErr } = await supabase
         .from("wallets")
-        .upsert({ user_id: userId, balance: newBalance, updated_at: new Date().toISOString() });
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq("id", userId);
       if (upErr) throw upErr;
+
+      /* 3. Record transaction */
+      const { error: txErr } = await supabase
+        .from("wallet_transactions")
+        .insert({ wallet_id: userId, amount: rawAmount, type: "bakiye_yukleme", status: "tamamlandi", description: "Bakiye yükleme" });
+      if (txErr) throw txErr;
 
       /* 3. Update local state */
       setBalance(newBalance);
@@ -370,7 +363,7 @@ export default function CuzdanPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
           {/* ── Left: Balance Card ── */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -437,7 +430,7 @@ export default function CuzdanPage() {
 
               <AnimatePresence>
                 {depositValid && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -446,7 +439,7 @@ export default function CuzdanPage() {
                     <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                       <span className="font-semibold">{fmtTL(depositAmount!)}</span> bakiyenize eklenecek.
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
 
@@ -479,10 +472,10 @@ export default function CuzdanPage() {
                 Simülasyon modu — gerçek ödeme alınmaz
               </p>
             </div>
-          </motion.div>
+          </m.div>
 
           {/* ── Right: Transaction History ── */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.08 }}
@@ -521,7 +514,7 @@ export default function CuzdanPage() {
                       const TxIcon    = txCfg.Icon;
                       const StIcon    = statusCfg.Icon;
                       return (
-                        <motion.li
+                        <m.li
                           key={tx.id}
                           initial={{ opacity: 0, y: -8 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -558,14 +551,14 @@ export default function CuzdanPage() {
                               {statusCfg.label}
                             </span>
                           </div>
-                        </motion.li>
+                        </m.li>
                       );
                     })}
                   </AnimatePresence>
                 </ul>
               )}
             </div>
-          </motion.div>
+          </m.div>
         </div>
       </main>
 

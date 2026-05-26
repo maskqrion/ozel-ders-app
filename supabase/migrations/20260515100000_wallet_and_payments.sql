@@ -41,26 +41,16 @@ alter table public.lessons
     check (payment_status in ('pending', 'held_in_escrow', 'paid_to_teacher', 'refunded'));
 
 -------------------------------------------------------------------------------
--- 4a. RLS: wallets — kullanıcı yalnızca kendi cüzdanını görebilir/güncelleyebilir
+-- 4a. RLS: wallets — superseded by 20260520140000_wallet_secure_architecture.sql
+-- (remote wallets table uses id=auth.uid() 1:1, not a user_id column)
 -------------------------------------------------------------------------------
-alter table public.wallets enable row level security;
-
-drop policy if exists wallets_select on public.wallets;
-create policy wallets_select on public.wallets
-  for select to authenticated
-  using (user_id = auth.uid());
-
-drop policy if exists wallets_insert on public.wallets;
-create policy wallets_insert on public.wallets
-  for insert to authenticated
-  with check (user_id = auth.uid());
-
-drop policy if exists wallets_update on public.wallets;
-create policy wallets_update on public.wallets
-  for update to authenticated
-  using      (user_id = auth.uid())
-  with check (user_id = auth.uid());
-
+-- alter table public.wallets enable row level security;
+-- drop policy if exists wallets_select on public.wallets;
+-- create policy wallets_select on public.wallets for select to authenticated using (user_id = auth.uid());
+-- drop policy if exists wallets_insert on public.wallets;
+-- create policy wallets_insert on public.wallets for insert to authenticated with check (user_id = auth.uid());
+-- drop policy if exists wallets_update on public.wallets;
+-- create policy wallets_update on public.wallets for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 -- DELETE policy yok → default deny
 
 -------------------------------------------------------------------------------
@@ -88,29 +78,9 @@ create policy transactions_insert on public.transactions
 --    yazabilmesi için gerekli; fonksiyon sahibi (postgres) tablo sahibiyle aynı.
 --    BEGIN/EXCEPTION → cüzdan oluşturma başarısız olsa bile kayıt akışını bloklamaz.
 -------------------------------------------------------------------------------
-create or replace function public.t_create_wallet_for_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-begin
-  begin
-    insert into public.wallets (user_id, balance)
-    values (new.id, 0)
-    on conflict (user_id) do nothing;
-  exception when others then
-    null; -- sessiz hata; kullanıcı kaydını engelleme
-  end;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created_wallet on auth.users;
-create trigger on_auth_user_created_wallet
-  after insert on auth.users
-  for each row
-  execute function public.t_create_wallet_for_new_user();
+-- superseded by 20260520140000_wallet_secure_architecture.sql
+-- create or replace function public.t_create_wallet_for_new_user() ...
+-- drop trigger if exists on_auth_user_created_wallet on auth.users;
 
 -------------------------------------------------------------------------------
 -- ROLLBACK (acil durum, manuel olarak çalıştır):

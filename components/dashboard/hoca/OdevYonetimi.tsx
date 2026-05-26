@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -19,7 +19,7 @@ type Props = {
 
 function Spinner() {
   return (
-    <motion.span aria-hidden animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white" />
+    <m.span aria-hidden animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white" />
   );
 }
 
@@ -96,7 +96,7 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-base font-semibold text-slate-800">Ödev Ver</h2>
         <form onSubmit={odevVer} className="space-y-3">
           <select value={secilenDersId} onChange={(e) => setSecilenDersId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500">
@@ -111,9 +111,9 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
             {odevLoading ? "Gönderiliyor..." : "Ödevi Gönder"}
           </button>
         </form>
-      </motion.div>
+      </m.div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+      <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
         <h2 className="mb-4 text-base font-semibold text-slate-800">Verilen Ödevler</h2>
 
         {isLoading ? (
@@ -137,7 +137,7 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
                 const palette = scorePalette(scoreInput);
 
                 return (
-                  <motion.div
+                  <m.div
                     key={o.id}
                     layout
                     initial={{ opacity: 0, y: 8 }}
@@ -179,13 +179,13 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
 
                           <AnimatePresence mode="wait" initial={false}>
                             {isGrading ? (
-                              <motion.div key="grade-form" initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -6, height: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="mt-2 overflow-hidden">
+                              <m.div key="grade-form" initial={{ opacity: 0, y: -6, height: 0 }} animate={{ opacity: 1, y: 0, height: "auto" }} exit={{ opacity: 0, y: -6, height: 0 }} transition={{ duration: 0.25, ease: "easeOut" }} className="mt-2 overflow-hidden">
                                 <div className={`rounded-lg border bg-white p-3 ${palette.border}`}>
                                   <div className="mb-2 flex items-center justify-between">
                                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ödevi Puanla</span>
-                                    <motion.span key={Math.round(scoreInput)} initial={{ scale: 0.85, opacity: 0.6 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.18 }} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${palette.bg} ${palette.text}`}>
+                                    <m.span key={Math.round(scoreInput)} initial={{ scale: 0.85, opacity: 0.6 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.18 }} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${palette.bg} ${palette.text}`}>
                                       ★ {Math.round(scoreInput)} / 100
-                                    </motion.span>
+                                    </m.span>
                                   </div>
                                   <input type="range" min={0} max={100} step={1} value={scoreInput} onChange={(e) => setScoreInput(Number(e.target.value))} className={`w-full cursor-pointer ${palette.sliderAccent}`} />
                                   <div className="mt-2 flex items-center gap-2">
@@ -193,16 +193,16 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
                                     <span className="text-xs text-slate-400">/ 100 · {palette.label}</span>
                                   </div>
                                   <div className="mt-3 flex gap-2">
-                                    <motion.button onClick={() => odeviPuanla(o.id)} disabled={updateMutation.isPending} whileTap={{ scale: 0.97 }} className="flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70">
+                                    <m.button onClick={() => odeviPuanla(o.id)} disabled={updateMutation.isPending} whileTap={{ scale: 0.97 }} className="flex flex-1 items-center justify-center gap-2 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70">
                                       {updateMutation.isPending && <Spinner />}
                                       {updateMutation.isPending ? "Kaydediliyor..." : "Puanı Kaydet"}
-                                    </motion.button>
+                                    </m.button>
                                     <button onClick={() => setGradingId(null)} className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-200">İptal</button>
                                   </div>
                                 </div>
-                              </motion.div>
+                              </m.div>
                             ) : isRejectingThis ? (
-                              <motion.div key="reject-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="mt-2 space-y-2 overflow-hidden rounded border border-slate-200 bg-white p-2">
+                              <m.div key="reject-form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} className="mt-2 space-y-2 overflow-hidden rounded border border-slate-200 bg-white p-2">
                                 <textarea className="w-full rounded border border-slate-200 p-2 text-xs outline-none focus:border-red-500" placeholder="Öğrenciye reddetme sebebini yazın..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={2} />
                                 <div className="flex gap-2">
                                   <button onClick={() => odeviReddet(o.id, o.submission_file_path)} disabled={updateMutation.isPending} className="flex-1 rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-700 disabled:opacity-60">
@@ -210,27 +210,27 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
                                   </button>
                                   <button onClick={() => { setRejectingId(null); setRejectionReason(""); }} className="rounded bg-slate-100 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-200">İptal</button>
                                 </div>
-                              </motion.div>
+                              </m.div>
                             ) : (
-                              <motion.div key="action-triggers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-1 flex items-center gap-3">
+                              <m.div key="action-triggers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-1 flex items-center gap-3">
                                 <button onClick={() => openGrading(o.id, o.score ?? null)} className="text-xs font-medium text-emerald-700 transition-colors hover:text-emerald-800">
                                   {o.score != null ? "Puanı Düzenle" : "Puanla"}
                                 </button>
                                 <span className="text-slate-200">·</span>
                                 <button onClick={() => openReject(o.id)} className="text-xs text-slate-500 transition-colors hover:text-red-600">Reddet</button>
-                              </motion.div>
+                              </m.div>
                             )}
                           </AnimatePresence>
                         </div>
                       </div>
                     )}
-                  </motion.div>
+                  </m.div>
                 );
               })}
             </AnimatePresence>
           </div>
         )}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

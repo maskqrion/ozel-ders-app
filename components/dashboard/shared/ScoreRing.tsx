@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { scorePalette } from "./scoreColors";
 
 export default function ScoreRing({
@@ -34,7 +34,7 @@ export default function ScoreRing({
           strokeWidth={stroke}
           fill="none"
         />
-        <motion.circle
+        <m.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -49,14 +49,14 @@ export default function ScoreRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <motion.span
+        <m.span
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.25 }}
           className={`text-xl font-extrabold leading-none ${p.text}`}
         >
           {clamped}
-        </motion.span>
+        </m.span>
         <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-slate-400">
           /100
         </span>

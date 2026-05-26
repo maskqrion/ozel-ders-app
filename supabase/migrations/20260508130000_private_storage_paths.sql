@@ -2,8 +2,8 @@
 update storage.buckets set public = false where id = 'kaynaklar';
 
 -- 2. DB kolonlarını "path" semantiğine yeniden adlandır
-alter table public.resources rename column file_url to file_path;
-alter table public.assignments rename column submission_file_url to submission_file_path;
+--alter table public.resources rename column file_url to file_path;
+--alter table public.assignments rename column submission_file_url to submission_file_path; -- already applied on remote
 
 -- 3. Mevcut public URL formatlı kayıtları path'e dönüştür
 --    (https://<proj>.supabase.co/storage/v1/object/public/kaynaklar/<path> -> <path>)

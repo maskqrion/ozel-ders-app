@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
+import { updateProfile } from "@/app/actions/profile";
 import type { UserProfile } from "@/lib/types";
 import LevelProgressBar from "@/components/dashboard/shared/LevelProgressBar";
 import { useUploadFile } from "@/lib/hooks/useStorage";
@@ -42,7 +43,7 @@ const ROLE_THEME: Record<"hoca" | "ogrenci", RoleTheme> = {
 
 function Spinner() {
   return (
-    <motion.span
+    <m.span
       aria-hidden
       animate={{ rotate: 360 }}
       transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -62,11 +63,13 @@ export default function ProfilSayfasi() {
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [isPending, startTransition] = useTransition();
+
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ProfileUpdateFormValues>({
     resolver: zodResolver(profileUpdateSchema),
   });
@@ -118,12 +121,18 @@ export default function ProfilSayfasi() {
     }
   };
 
-  const onSubmit = async (values: ProfileUpdateFormValues) => {
+  const onSubmit = (values: ProfileUpdateFormValues) => {
     if (!profile) return;
 
-    const updates: Record<string, string | number | null> = {
-      full_name: values.full_name?.trim() || null,
-    };
+    const updates: {
+      full_name?: string | null;
+      sehir?: string | null;
+      ilce?: string | null;
+      hakkinda?: string | null;
+      ders_fiyati?: number | null;
+      video_url?: string | null;
+      portfolio_url?: string | null;
+    } = { full_name: values.full_name?.trim() || null };
 
     if (profile.role === "hoca") {
       const trimmed = (values.ders_fiyati || "").trim();
@@ -144,12 +153,13 @@ export default function ProfilSayfasi() {
       updates.portfolio_url = values.portfolio_url?.trim() || null;
     }
 
-    const { error } = await supabase.from("users").update(updates).eq("id", profile.id);
-    if (error) { toast.error(getErrorMessage(error)); return; }
-
-    setProfile((prev) => prev ? { ...prev, ...updates } as UserProfile : null);
-    queryClient.invalidateQueries({ queryKey: ["profile"] });
-    toast.success("Profil bilgileri kaydedildi.");
+    startTransition(async () => {
+      const result = await updateProfile(updates);
+      if (result.error) { toast.error(result.error); return; }
+      setProfile((prev) => prev ? { ...prev, ...updates } as UserProfile : null);
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Profil bilgileri kaydedildi.");
+    });
   };
 
   const updatePassword = async () => {
@@ -191,7 +201,7 @@ export default function ProfilSayfasi() {
       </nav>
 
       <main className="mx-auto mt-6 max-w-3xl p-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
@@ -260,7 +270,7 @@ export default function ProfilSayfasi() {
 
               <AnimatePresence initial={false}>
                 {isHoca && (
-                  <motion.section
+                  <m.section
                     key="hoca-fields"
                     initial={{ opacity: 0, y: 8, height: 0 }}
                     animate={{ opacity: 1, y: 0, height: "auto" }}
@@ -383,20 +393,20 @@ export default function ProfilSayfasi() {
                         </div>
                       </div>
                     </div>
-                  </motion.section>
+                  </m.section>
                 )}
               </AnimatePresence>
 
               <div className="flex justify-end pt-2">
-                <motion.button
+                <m.button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isPending}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-70"
+                  className="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:opacity-70"
                 >
-                  {isSubmitting && <Spinner />}
-                  {isSubmitting ? "Kaydediliyor..." : "Bilgileri Kaydet"}
-                </motion.button>
+                  {isPending && <Spinner />}
+                  {isPending ? "Kaydediliyor..." : "Bilgileri Kaydet"}
+                </m.button>
               </div>
             </form>
 
@@ -415,7 +425,7 @@ export default function ProfilSayfasi() {
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-slate-800 transition focus:border-rose-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-rose-500/15"
                   />
                 </div>
-                <motion.button
+                <m.button
                   type="button"
                   onClick={updatePassword}
                   disabled={pwSaving}
@@ -423,7 +433,7 @@ export default function ProfilSayfasi() {
                   className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-rose-50 px-6 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-70 sm:w-auto"
                 >
                   {pwSaving && (
-                    <motion.span
+                    <m.span
                       aria-hidden
                       animate={{ rotate: 360 }}
                       transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -431,11 +441,11 @@ export default function ProfilSayfasi() {
                     />
                   )}
                   {pwSaving ? "Değiştiriliyor..." : "Şifreyi Değiştir"}
-                </motion.button>
+                </m.button>
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </main>
     </div>
   );

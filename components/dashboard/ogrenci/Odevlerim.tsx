@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useTransition } from "react";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase/client";
+import { submitAssignment } from "@/app/actions/assignments";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAssignments } from "@/lib/hooks/useAssignments";
 import { useUploadFile } from "@/lib/hooks/useStorage";
@@ -25,38 +25,38 @@ export default function Odevlerim({ onAwardXp }: Props) {
 
   const [submissionText, setSubmissionText] = useState<Record<string, string>>({});
   const [submissionFile, setSubmissionFile] = useState<Record<string, File | null>>({});
-  const [submitting, setSubmitting] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const teslimEt = async (assignmentId: string) => {
+  const teslimEt = (assignmentId: string) => {
     const text = (submissionText[assignmentId] || "").trim();
     const file = submissionFile[assignmentId];
 
     if (!text && !file) { toast.error("Teslim için en az bir açıklama veya dosya ekle."); return; }
     if (!profile?.id) return;
 
-    setSubmitting(assignmentId);
-    try {
-      let filePath: string | null = null;
-      if (file) {
-        filePath = await uploadFile({ file, folder: `teslimler/${profile.id}` });
+    setSubmittingId(assignmentId);
+    startTransition(async () => {
+      try {
+        let filePath: string | null = null;
+        if (file) {
+          filePath = await uploadFile({ file, folder: `teslimler/${profile.id}` });
+        }
+
+        const result = await submitAssignment(assignmentId, text || null, filePath);
+        if (result.error) { toast.error("Hata: " + result.error); return; }
+
+        setSubmissionText((prev) => { const n = { ...prev }; delete n[assignmentId]; return n; });
+        setSubmissionFile((prev) => { const n = { ...prev }; delete n[assignmentId]; return n; });
+        queryClient.invalidateQueries({ queryKey: ["assignments"] });
+        toast.success("Ödeviniz başarıyla teslim edildi.");
+        onAwardXp?.(50, "Ödev teslim edildi");
+      } catch (err: unknown) {
+        toast.error("Hata: " + (err as Error).message);
+      } finally {
+        setSubmittingId(null);
       }
-
-      const { error } = await supabase
-        .from("assignments")
-        .update({ submission_text: text || null, submission_file_path: filePath, submitted_at: new Date().toISOString(), status: "yapildi", rejection_reason: null })
-        .eq("id", assignmentId);
-      if (error) throw error;
-
-      setSubmissionText((prev) => { const n = { ...prev }; delete n[assignmentId]; return n; });
-      setSubmissionFile((prev) => { const n = { ...prev }; delete n[assignmentId]; return n; });
-      queryClient.invalidateQueries({ queryKey: ["assignments"] });
-      toast.success("Ödeviniz başarıyla teslim edildi.");
-      onAwardXp?.(50, "Ödev teslim edildi");
-    } catch (err: unknown) {
-      toast.error("Hata: " + (err as Error).message);
-    } finally {
-      setSubmitting(null);
-    }
+    });
   };
 
   if (isLoading) {
@@ -75,9 +75,9 @@ export default function Odevlerim({ onAwardXp }: Props) {
 
   if (odevler.length === 0) {
     return (
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500">
+      <m.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-lg border border-slate-200 bg-white p-4 text-slate-500">
         Henüz bir ödev tanımlanmadı.
-      </motion.p>
+      </m.p>
     );
   }
 
@@ -88,7 +88,7 @@ export default function Odevlerim({ onAwardXp }: Props) {
           const isCompleted = o.status === "yapildi";
           const isRejected = o.status === "reddedildi";
           return (
-            <motion.div
+            <m.div
               key={o.id}
               layout
               initial={{ opacity: 0, y: 10 }}
@@ -111,11 +111,11 @@ export default function Odevlerim({ onAwardXp }: Props) {
               </div>
 
               {isRejected && (
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-md border border-red-100 bg-red-50 p-3">
+                <m.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 rounded-md border border-red-100 bg-red-50 p-3">
                   <p className="text-sm font-semibold text-red-800">Hocanız ödevinizi kabul etmedi!</p>
                   {o.rejection_reason && <p className="mt-1 text-sm text-red-700"><span className="font-semibold">Sebep:</span> {o.rejection_reason}</p>}
                   <p className="mt-2 text-xs text-red-600">Lütfen eksiklerinizi giderip aşağıdan tekrar teslim ediniz.</p>
-                </motion.div>
+                </m.div>
               )}
 
               {isCompleted ? (
@@ -124,20 +124,20 @@ export default function Odevlerim({ onAwardXp }: Props) {
                     {o.score != null ? (() => {
                       const p = scorePalette(o.score);
                       return (
-                        <motion.div key="scored" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3, ease: "easeOut" }} className={`flex items-center gap-4 rounded-xl border bg-white p-4 ${p.border}`}>
+                        <m.div key="scored" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3, ease: "easeOut" }} className={`flex items-center gap-4 rounded-xl border bg-white p-4 ${p.border}`}>
                           <ScoreRing score={o.score} size={88} stroke={9} />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Hocanın Notu</p>
                             <p className={`mt-1 text-2xl font-extrabold leading-none ${p.text}`}>{o.score} / 100</p>
                             <p className="mt-1 text-xs text-slate-500">{p.label}</p>
                           </div>
-                        </motion.div>
+                        </m.div>
                       );
                     })() : (
-                      <motion.div key="not-scored" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">
+                      <m.div key="not-scored" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">
                         <span aria-hidden>⏳</span>
                         Hocanız ödevinizi henüz değerlendirmedi.
-                      </motion.div>
+                      </m.div>
                     )}
                   </AnimatePresence>
                   {o.submitted_at && <p className="text-xs text-slate-500">Teslim: {new Date(o.submitted_at).toLocaleString("tr-TR")}</p>}
@@ -166,15 +166,15 @@ export default function Odevlerim({ onAwardXp }: Props) {
                     <button
                       type="button"
                       onClick={() => teslimEt(o.id)}
-                      disabled={submitting === o.id || isUploading}
+                      disabled={(isPending && submittingId === o.id) || isUploading}
                       className="whitespace-nowrap rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isUploading && submitting === o.id ? "Dosya Yükleniyor..." : submitting === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
+                      {isUploading && submittingId === o.id ? "Dosya Yükleniyor..." : isPending && submittingId === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
                     </button>
                   </div>
                 </div>
               )}
-            </motion.div>
+            </m.div>
           );
         })}
       </AnimatePresence>

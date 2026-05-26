@@ -1,11 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { AnimatePresence, motion } from "framer-motion";
-import LessonsCalendar from "@/components/LessonsCalendar";
+import { AnimatePresence, m } from "framer-motion";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useLessons } from "@/lib/hooks/useLessons";
+
+const LessonsCalendar = dynamic(() => import("@/components/LessonsCalendar"), {
+  ssr: false,
+  loading: () => <LoadingSpinner />,
+});
 
 export default function DersTakvimi() {
   const { data: profile } = useProfile();
@@ -27,7 +32,7 @@ export default function DersTakvimi() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
@@ -44,7 +49,7 @@ export default function DersTakvimi() {
         <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1">
           <AnimatePresence initial={false}>
             {seciliGunDersleri.length === 0 && selectedDate && (
-              <motion.p
+              <m.p
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -52,10 +57,10 @@ export default function DersTakvimi() {
                 className="text-sm text-slate-400"
               >
                 Bu gün için ders yok.
-              </motion.p>
+              </m.p>
             )}
             {seciliGunDersleri.map((d) => (
-              <motion.div
+              <m.div
                 key={d.id}
                 layout
                 initial={{ opacity: 0, y: 6 }}
@@ -79,11 +84,11 @@ export default function DersTakvimi() {
                 >
                   {d.status}
                 </span>
-              </motion.div>
+              </m.div>
             ))}
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

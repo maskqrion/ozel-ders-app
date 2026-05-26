@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import {
-  motion,
+  m,
   useMotionValue,
   useSpring,
   useMotionTemplate,
@@ -84,7 +84,7 @@ export function CardSpotlight({
       }}
     >
       {/* Spotlight layer — sits above bg, below content */}
-      <motion.div
+      <m.div
         className="pointer-events-none absolute inset-0 z-0"
         style={{ background }}
         aria-hidden
@@ -102,7 +102,7 @@ export function CardSpotlight({
       />
 
       {/* Hairline top rim — glows on hover */}
-      <motion.div
+      <m.div
         className="pointer-events-none absolute inset-x-0 top-0 z-0 h-px"
         animate={{
           opacity: isHovering ? 1 : 0,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 
 type Props = {
   open: boolean;
@@ -92,7 +92,7 @@ export default function VideoPlayer({ open, onClose, url, title }: Props) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -102,7 +102,7 @@ export default function VideoPlayer({ open, onClose, url, title }: Props) {
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-200/70 p-4 backdrop-blur-sm"
         >
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.94, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 18 }}
@@ -169,8 +169,8 @@ export default function VideoPlayer({ open, onClose, url, title }: Props) {
                 </div>
               )}
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

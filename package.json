@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update-types": "supabase gen types typescript --project-id cejssajtzztayqknsokw > lib/types/supabase.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",

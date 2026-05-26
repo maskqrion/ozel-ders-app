@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import type { Message, Role, UserProfile } from "@/lib/types";
@@ -103,7 +103,7 @@ function Avatar({ c, size = "md" }: { c: Contact; size?: "sm" | "md" | "lg" }) {
    ============================================================ */
 function Spinner() {
   return (
-    <motion.span
+    <m.span
       aria-hidden
       animate={{ rotate: 360 }}
       transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
@@ -367,7 +367,7 @@ export default function Mesajlar({ userId, role }: Props) {
               </div>
             </div>
             {totalUnread > 0 && (
-              <motion.span
+              <m.span
                 key={totalUnread}
                 initial={{ scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -375,7 +375,7 @@ export default function Mesajlar({ userId, role }: Props) {
                 className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-black text-white shadow-sm"
               >
                 {totalUnread > 99 ? "99+" : totalUnread}
-              </motion.span>
+              </m.span>
             )}
           </div>
 
@@ -426,7 +426,7 @@ export default function Mesajlar({ userId, role }: Props) {
                   const isActive = selectedContact?.id === c.id;
                   const unread = unreadCounts.get(c.id) ?? 0;
                   return (
-                    <motion.li
+                    <m.li
                       key={c.id}
                       layout
                       initial={{ opacity: 0, x: -8 }}
@@ -456,7 +456,7 @@ export default function Mesajlar({ userId, role }: Props) {
                           <p className="truncate text-xs text-white/25">{c.email}</p>
                         </div>
                         {unread > 0 && (
-                          <motion.span
+                          <m.span
                             key={unread}
                             initial={{ scale: 0.6, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -464,10 +464,10 @@ export default function Mesajlar({ userId, role }: Props) {
                             className="ml-1 inline-flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-black text-white"
                           >
                             {unread > 99 ? "99+" : unread}
-                          </motion.span>
+                          </m.span>
                         )}
                       </button>
-                    </motion.li>
+                    </m.li>
                   );
                 })}
               </AnimatePresence>
@@ -553,14 +553,14 @@ export default function Mesajlar({ userId, role }: Props) {
 
                         {/* Messages */}
                         <div className="space-y-1">
-                          {group.items.map((m, idx) => {
-                            const mine = m.sender_id === userId;
-                            const prevSame = idx > 0 && group.items[idx - 1].sender_id === m.sender_id;
+                          {group.items.map((msg, idx) => {
+                            const mine = msg.sender_id === userId;
+                            const prevSame = idx > 0 && group.items[idx - 1].sender_id === msg.sender_id;
                             const isFirst = !prevSame;
 
                             return (
-                              <motion.div
-                                key={m.id}
+                              <m.div
+                                key={msg.id}
                                 layout
                                 initial={{ opacity: 0, scale: 0.82, y: 14 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -592,20 +592,20 @@ export default function Mesajlar({ userId, role }: Props) {
                                         }
                                       : undefined}
                                   >
-                                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                                   </div>
                                   <div className={`flex items-center gap-1 mt-1 px-1 ${mine ? "flex-row-reverse" : ""}`}>
                                     <span className="text-[10px] font-medium text-white/25 tabular-nums">
-                                      {formatTime(m.created_at)}
+                                      {formatTime(msg.created_at)}
                                     </span>
                                     {mine && (
-                                      m.is_read
+                                      msg.is_read
                                         ? <IDblChk size={12} sw={2.5} className="text-emerald-400" />
                                         : <IChk size={12} sw={2.5} className="text-white/20" />
                                     )}
                                   </div>
                                 </div>
-                              </motion.div>
+                              </m.div>
                             );
                           })}
                         </div>
@@ -638,7 +638,7 @@ export default function Mesajlar({ userId, role }: Props) {
                   style={{ maxHeight: "120px" }}
                 />
               </div>
-              <motion.button
+              <m.button
                 type="submit"
                 whileTap={{ scale: 0.9 }}
                 disabled={sending || !draft.trim()}
@@ -656,7 +656,7 @@ export default function Mesajlar({ userId, role }: Props) {
                 aria-label="Gönder"
               >
                 {sending ? <Spinner /> : <ISend size={16} sw={2.2} />}
-              </motion.button>
+              </m.button>
             </form>
           </>
         )}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import type { Notification, NotificationType } from "@/lib/types";
@@ -97,7 +97,7 @@ function relativeTime(iso: string): string {
 // ─── SVG Bell ────────────────────────────────────────────────────────────────
 function BellIcon({ ringing }: { ringing: boolean }) {
   return (
-    <motion.svg
+    <m.svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -110,7 +110,7 @@ function BellIcon({ ringing }: { ringing: boolean }) {
     >
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </motion.svg>
+    </m.svg>
   );
 }
 
@@ -239,7 +239,7 @@ export default function NotificationBell({ userId }: Props) {
   return (
     <div ref={wrapperRef} className="relative">
       {/* ── Bell button ── */}
-      <motion.button
+      <m.button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={`Bildirimler${unreadCount > 0 ? ` (${unreadCount} okunmamış)` : ""}`}
@@ -259,7 +259,7 @@ export default function NotificationBell({ userId }: Props) {
         {/* Badge */}
         <AnimatePresence>
           {unreadCount > 0 && (
-            <motion.span
+            <m.span
               key="badge"
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -283,15 +283,15 @@ export default function NotificationBell({ userId }: Props) {
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
-            </motion.span>
+            </m.span>
           )}
         </AnimatePresence>
-      </motion.button>
+      </m.button>
 
       {/* ── Dropdown ── */}
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             key="dropdown"
             initial={{ opacity: 0, scaleY: 0.88, y: -8 }}
             animate={{ opacity: 1, scaleY: 1, y: 0 }}
@@ -325,7 +325,7 @@ export default function NotificationBell({ userId }: Props) {
                     {unreadCount > 0 ? `${unreadCount} okunmamış` : "Tümü okundu"}
                   </p>
                 </div>
-                <motion.button
+                <m.button
                   type="button"
                   onClick={markAllAsRead}
                   disabled={unreadCount === 0 || marking}
@@ -343,7 +343,7 @@ export default function NotificationBell({ userId }: Props) {
                   }}
                 >
                   Tümünü Okundu İşaretle
-                </motion.button>
+                </m.button>
               </header>
 
               {/* List */}
@@ -376,7 +376,7 @@ export default function NotificationBell({ userId }: Props) {
                       {notifications.map((n, i) => {
                         const cfg = getTypeConfig(n.type);
                         return (
-                          <motion.li
+                          <m.li
                             key={n.id}
                             layout
                             initial={{ opacity: 0, x: 16 }}
@@ -449,7 +449,7 @@ export default function NotificationBell({ userId }: Props) {
                                 </p>
                               </div>
                             </button>
-                          </motion.li>
+                          </m.li>
                         );
                       })}
                     </AnimatePresence>
@@ -457,7 +457,7 @@ export default function NotificationBell({ userId }: Props) {
                 )}
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
