@@ -33,6 +33,21 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# mobile app credentials & signing (Capacitor / Firebase)
+# NOT: android/app/google-services.json şu an git geçmişinde takipte;
+# untrack etmek için README "Güvenlik" bölümündeki komutu çalıştırın.
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+*.jks
+*.keystore
+keystore.properties
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 # vercel
 .vercel
 

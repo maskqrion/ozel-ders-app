@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "playwright test",
     "update-types": "supabase gen types typescript --project-id cejssajtzztayqknsokw > lib/types/supabase.ts"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.3.3",
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

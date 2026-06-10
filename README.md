@@ -20,6 +20,73 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Komutlar
+
+| Komut | Açıklama |
+| --- | --- |
+| `npm run dev` | Geliştirme sunucusunu başlatır (http://localhost:3000) |
+| `npm run build` | Production build alır (tip kontrolü dahil) |
+| `npm run lint` | ESLint ile kod denetimi |
+| `npm run typecheck` | `next typegen` + `tsc --noEmit` ile tam tip kontrolü |
+| `npm run test` | Playwright smoke testlerini çalıştırır (Chromium) |
+
+## Testler
+
+E2E smoke testleri `tests/e2e/` altındadır ve Playwright ile çalışır. Kapsam:
+
+- Açılış sayfası yükleniyor (`/`)
+- Giriş sayfası yükleniyor (`/login`)
+- Korumalı dashboard, oturumu olmayan kullanıcıyı `/login`'e yönlendiriyor
+- Herkese açık eğitmen profili (`/hoca/[id]`) login'e yönlendirmeden yanıt veriyor
+
+İlk kurulumda tarayıcıyı indirin: `npx playwright install chromium`
+
+Testler gerçek kullanıcı kimlik bilgisi, ödeme veya ücretli AI çağrısı **kullanmaz**;
+yalnızca oturumsuz sayfa yüklemeleri yapılır.
+
+**TODO (sonraki fazlar):** Vitest + React Testing Library ile birim/bileşen testleri;
+kritik akışlar (rezervasyon, cüzdan, quiz) için mock'lanmış entegrasyon testleri.
+
+## Güvenlik
+
+### Ortam değişkenleri
+
+- Gerçek anahtarlar yalnızca `.env.local` dosyasındadır; bu dosya `.gitignore`'daki
+  `.env*` kuralı ile takip dışıdır. **Asla commit etmeyin.**
+- Yeni bir gizli değer eklerken `NEXT_PUBLIC_` önekini yalnızca tarayıcıya
+  açılması güvenli değerlerde kullanın (ör. Supabase anon key). Service role key,
+  Sentry auth token, web-push private key gibi değerler **asla** `NEXT_PUBLIC_` olmamalıdır.
+
+### Mobil yapılandırma dosyaları
+
+`android/app/google-services.json` şu an git'te takiptedir. Firebase istemci
+yapılandırması tek başına "gizli anahtar" sayılmasa da repo herkese açılacaksa
+takipten çıkarılması önerilir. Dosyayı diskte tutup yalnızca git takibinden
+çıkarmak için:
+
+```bash
+git rm --cached android/app/google-services.json
+git commit -m "chore: google-services.json git takibinden çıkarıldı"
+```
+
+`.gitignore` kuralı eklendiği için dosya bir daha yanlışlıkla eklenemez.
+İmzalama anahtarları (`*.jks`, `*.keystore`, `keystore.properties`) da aynı
+şekilde ignore edilir.
+
+### Sızıntı taraması (secret scanning)
+
+Repo'da otomatik bir tarama kurulu değildir. Commit'lemeden önce hızlı bir
+tarama için [gitleaks](https://github.com/gitleaks/gitleaks) önerilir:
+
+```bash
+# Kurulum (Windows): winget install gitleaks   |   (macOS): brew install gitleaks
+gitleaks git .      # commit geçmişini tarar
+gitleaks dir .      # çalışma dizinini tarar
+```
+
+CI eklenirse `gitleaks/gitleaks-action` adımı eklemek yeterlidir; ek npm
+bağımlılığı gerekmez.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
