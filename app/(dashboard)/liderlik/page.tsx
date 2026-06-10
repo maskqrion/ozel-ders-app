@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase/client";
@@ -106,18 +107,22 @@ function Avatar({
   sizeClass,
   textClass,
   ringClass,
+  px = 48,
 }: {
   entry: LeaderEntry;
   sizeClass: string;
   textClass: string;
   ringClass: string;
+  px?: number;
 }) {
   const color = AVATAR_COLORS[entry.id.charCodeAt(0) % AVATAR_COLORS.length];
   if (entry.avatar_url) {
     return (
-      <img
+      <Image
         src={entry.avatar_url}
         alt={entry.full_name ?? "Kullanıcı"}
+        width={px}
+        height={px}
         className={`${sizeClass} rounded-full object-cover ${ringClass}`}
       />
     );
@@ -232,6 +237,7 @@ function PodiumCard({
           sizeClass={medal.avatarSize}
           textClass={medal.avatarText}
           ringClass={entry ? medal.avatarRing : ""}
+          px={rank === 1 ? 64 : 48}
         />
 
         {/* Name */}
@@ -270,9 +276,10 @@ function PodiumCard({
 ═══════════════════════════════════════════════════════════════ */
 export default function LiderlikPage() {
   const router = useRouter();
-  const [userId,  setUserId]  = useState<string | null>(null);
-  const [entries, setEntries] = useState<LeaderEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userId,    setUserId]    = useState<string | null>(null);
+  const [userRole,  setUserRole]  = useState<"hoca" | "ogrenci" | null>(null);
+  const [entries,   setEntries]   = useState<LeaderEntry[]>([]);
+  const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
     const init = async () => {
@@ -283,6 +290,13 @@ export default function LiderlikPage() {
           return router.push("/login");
         }
         setUserId(user.id);
+
+        const { data: roleRow } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (roleRow) setUserRole(roleRow.role as "hoca" | "ogrenci");
 
         const { data } = await supabase
           .from("users")
@@ -321,7 +335,7 @@ export default function LiderlikPage() {
       <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-amber-100 bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-3">
           <Link
-            href="/ogrenci"
+            href={userRole === "hoca" ? "/hoca" : "/ogrenci"}
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-50 hover:text-amber-600"
           >
             <ArrowLeftIcon size={16} strokeWidth={2} />
@@ -490,6 +504,7 @@ export default function LiderlikPage() {
                             sizeClass="h-9 w-9 shrink-0"
                             textClass="text-xs"
                             ringClass={isMe ? "ring-2 ring-amber-400 ring-offset-1" : ""}
+                            px={36}
                           />
 
                           {/* Name + role */}
@@ -552,9 +567,9 @@ export default function LiderlikPage() {
               © {new Date().getFullYear()} Özel Ders Pro. Tüm hakları saklıdır.
             </p>
             <div className="flex items-center gap-5 text-sm text-slate-400">
-              <a href="#" className="transition hover:text-slate-700">Yardım</a>
-              <a href="#" className="transition hover:text-slate-700">Gizlilik</a>
-              <a href="#" className="transition hover:text-slate-700">Kullanım Koşulları</a>
+              <a href="mailto:destek@ozelderspro.com" className="transition hover:text-slate-700">Yardım</a>
+              <a href="/gizlilik" className="transition hover:text-slate-700">Gizlilik</a>
+              <a href="/kullanim-kosullari" className="transition hover:text-slate-700">Kullanım Koşulları</a>
             </div>
           </div>
         </div>

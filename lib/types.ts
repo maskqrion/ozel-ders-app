@@ -1,5 +1,5 @@
 export type Role = 'hoca' | 'ogrenci';
-export type LessonStatus = 'bekliyor' | 'tamamlandi';
+export type LessonStatus = 'bekliyor' | 'tamamlandi' | 'iptal';
 export type AssignmentStatus = 'verildi' | 'yapildi' | 'reddedildi';
 
 export interface UserProfile {
@@ -20,6 +20,9 @@ export interface UserProfile {
   video_url: string | null;
   portfolio_url: string | null;
 
+  // KYC: Iyzico ödeme akışı için TC kimlik numarası
+  identity_number?: string | null;
+
   // Gamification (herkes için, default: level=1, xp=0)
   level: number;
   xp: number;
@@ -31,7 +34,11 @@ export interface Lesson {
   ogrenci_id: string;
   lesson_date: string;
   status: LessonStatus;
-  users?: { email: string };
+  payment_status?: string | null;
+  price?: number | null;
+  meeting_room_id?: string | null;
+  users?: { email: string; full_name?: string | null } | null;
+  hoca?: { email: string; full_name?: string | null } | null;
 }
 
 export interface Assignment {
@@ -76,6 +83,7 @@ export interface Invitation {
   token: string;
   is_used: boolean;
   created_at: string;
+  expires_at?: string | null;
 }
 
 export interface Message {
@@ -115,6 +123,8 @@ export interface Quiz {
   title: string;
   description: string | null;
   created_at: string;
+  is_ai_generated?: boolean;
+  lesson_id?: string | null;
   quiz_questions?: QuizQuestion[];
 }
 

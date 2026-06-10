@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { submitAssignment } from "@/app/actions/assignments";
+import { submitAssignment, uploadSubmissionFile } from "@/app/actions/assignments";
+import { ACCEPTED_EXTENSIONS } from "@/lib/validations/assignments";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAssignments } from "@/lib/hooks/useAssignments";
-import { useUploadFile } from "@/lib/hooks/useStorage";
 import Skeleton from "@/components/ui/Skeleton";
 import ScoreBadge from "@/components/dashboard/shared/ScoreBadge";
 import ScoreRing from "@/components/dashboard/shared/ScoreRing";
@@ -21,7 +21,6 @@ export default function Odevlerim({ onAwardXp }: Props) {
   const { data: profile } = useProfile();
   const { data: odevler = [], isLoading } = useAssignments(profile?.id, profile?.role);
   const queryClient = useQueryClient();
-  const { mutateAsync: uploadFile, isPending: isUploading } = useUploadFile();
 
   const [submissionText, setSubmissionText] = useState<Record<string, string>>({});
   const [submissionFile, setSubmissionFile] = useState<Record<string, File | null>>({});
@@ -33,14 +32,17 @@ export default function Odevlerim({ onAwardXp }: Props) {
     const file = submissionFile[assignmentId];
 
     if (!text && !file) { toast.error("Teslim için en az bir açıklama veya dosya ekle."); return; }
-    if (!profile?.id) return;
 
     setSubmittingId(assignmentId);
     startTransition(async () => {
       try {
         let filePath: string | null = null;
         if (file) {
-          filePath = await uploadFile({ file, folder: `teslimler/${profile.id}` });
+          const fd = new FormData();
+          fd.append("file", file);
+          const upload = await uploadSubmissionFile(fd);
+          if (upload.error) { toast.error("Dosya yüklenemedi: " + upload.error); return; }
+          filePath = upload.path ?? null;
         }
 
         const result = await submitAssignment(assignmentId, text || null, filePath);
@@ -160,16 +162,17 @@ export default function Odevlerim({ onAwardXp }: Props) {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input
                       type="file"
+                      accept={ACCEPTED_EXTENSIONS}
                       onChange={(e) => setSubmissionFile((prev) => ({ ...prev, [o.id]: e.target.files?.[0] || null }))}
                       className="min-w-0 flex-1 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
                     />
                     <button
                       type="button"
                       onClick={() => teslimEt(o.id)}
-                      disabled={(isPending && submittingId === o.id) || isUploading}
+                      disabled={isPending && submittingId === o.id}
                       className="whitespace-nowrap rounded-md bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isUploading && submittingId === o.id ? "Dosya Yükleniyor..." : isPending && submittingId === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
+                      {isPending && submittingId === o.id ? "Gönderiliyor..." : isRejected ? "Tekrar Teslim Et" : "Teslim Et"}
                     </button>
                   </div>
                 </div>

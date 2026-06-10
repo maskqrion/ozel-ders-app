@@ -216,12 +216,11 @@ export default function NotificationBell({ userId }: Props) {
         .update({ is_read: true })
         .in("id", unreadIds);
       if (error) throw error;
-    } catch (err: unknown) {
+    } catch {
       setNotifications((prev) =>
         prev.map((n) => (unreadIds.includes(n.id) ? { ...n, is_read: false } : n)),
       );
-      const msg = err instanceof Error ? err.message : "";
-      toast.error("Bildirimler güncellenemedi" + (msg ? `: ${msg}` : ""));
+      toast.error("Bildirimler güncellenemedi. Lütfen tekrar deneyin.");
     } finally {
       setMarking(false);
     }

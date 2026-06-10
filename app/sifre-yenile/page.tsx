@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { resetPasswordSchema, type ResetPasswordFormValues } from "@/lib/validations/auth";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { resetPassword } from "@/app/actions/auth";
 
 export default function SifreYenilePage() {
   const router = useRouter();
@@ -20,9 +20,9 @@ export default function SifreYenilePage() {
   });
 
   const onSubmit = async (values: ResetPasswordFormValues) => {
-    const { error } = await supabase.auth.updateUser({ password: values.password });
-    if (error) {
-      toast.error(getErrorMessage(error));
+    const result = await resetPassword(values.password, values.confirmPassword);
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
     toast.success("Şifreniz başarıyla güncellendi. Lütfen tekrar giriş yapın.");

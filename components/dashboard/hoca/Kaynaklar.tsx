@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { createResource } from "@/app/actions/resources";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useUploadFile } from "@/lib/hooks/useStorage";
 import type { Resource } from "@/lib/types";
@@ -16,29 +17,53 @@ type Props = {
   kaynaklar: Resource[];
 };
 
-export default function Kaynaklar({ kaynaklar }: Props) {
+export default function Kaynaklar({ kaynaklar: initialKaynaklar }: Props) {
   const { data: profile } = useProfile();
   const queryClient = useQueryClient();
   const { mutateAsync: uploadFile } = useUploadFile();
 
   const [file, setFile] = useState<File | null>(null);
   const [fileTitle, setFileTitle] = useState("");
+  const [localKaynaklar, setLocalKaynaklar] = useState<Resource[]>(initialKaynaklar);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalKaynaklar(initialKaynaklar);
+  }, [initialKaynaklar]);
 
   const handleUpload = async () => {
     if (!file || !fileTitle) {
       toast.error("Dosya ve başlık gerekli.");
       throw new Error("validation");
     }
-    const filePath = await uploadFile({ file, folder: `kaynaklar/${profile?.id}` });
+    const filePath = await uploadFile({ file, folder: `kaynaklar/${profile?.id ?? "shared"}` });
     if (!filePath) throw new Error("Dosya yolu alınamadı.");
-    const { error: dbError } = await supabase
-      .from("resources")
-      .insert([{ yukleyen_id: profile!.id, title: fileTitle, file_path: filePath }]);
-    if (dbError) throw dbError;
+    const result = await createResource(filePath, fileTitle);
+    if (!result.ok) throw new Error(result.error);
     toast.success("Dosya yüklendi.");
     setFileTitle("");
     setFile(null);
     queryClient.invalidateQueries({ queryKey: ["kaynaklar"] });
+  };
+
+  const handleDelete = async (k: Resource) => {
+    if (!window.confirm(`"${k.title}" kaynağını silmek istediğinize emin misiniz?`)) return;
+    setDeletingId(k.id);
+    try {
+      // DB kaydını önce sil; başarısız olursa dosya hâlâ erişilebilir kalır.
+      const { error } = await supabase.from("resources").delete().eq("id", k.id);
+      if (error) throw error;
+      setLocalKaynaklar((prev) => prev.filter((r) => r.id !== k.id));
+      toast.success("Kaynak silindi.");
+      // Dosyayı DB'den sonra kaldır; hata ana akışı etkilemez.
+      supabase.storage.from("kaynaklar").remove([k.file_path]).then(({ error: storErr }) => {
+        if (storErr) console.error("Storage dosyası silinemedi:", storErr);
+      });
+    } catch {
+      toast.error("Silinemedi. Lütfen tekrar deneyin.");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -81,9 +106,9 @@ export default function Kaynaklar({ kaynaklar }: Props) {
       >
         <h2 className="mb-4 text-base font-semibold text-slate-800">Yüklenen Kaynaklar</h2>
         <div className="max-h-[500px] space-y-2 overflow-y-auto pr-2">
-          {kaynaklar.length === 0 && <p className="text-sm text-slate-400">Henüz kaynak yüklenmedi.</p>}
+          {localKaynaklar.length === 0 && <p className="text-sm text-slate-400">Henüz kaynak yüklenmedi.</p>}
           <AnimatePresence initial={false}>
-            {kaynaklar.map((k) => (
+            {localKaynaklar.map((k) => (
               <m.div
                 key={k.id}
                 layout
@@ -100,18 +125,30 @@ export default function Kaynaklar({ kaynaklar }: Props) {
                   radius={240}
                   className="block"
                 >
-                  <a
-                    href={k.signed_url || "#"}
-                    onClick={(e) => {
-                      if (!k.signed_url) e.preventDefault();
-                    }}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 p-3"
-                  >
-                    <span className="text-slate-400">📄</span>
-                    <span className="truncate text-sm text-slate-700">{k.title}</span>
-                  </a>
+                  <div className="flex items-center gap-2 p-3">
+                    <a
+                      href={k.signed_url || "#"}
+                      onClick={(e) => { if (!k.signed_url) e.preventDefault(); }}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex min-w-0 flex-1 items-center gap-2"
+                    >
+                      <span className="text-slate-400">📄</span>
+                      <span className="truncate text-sm text-slate-700">{k.title}</span>
+                    </a>
+                    <button
+                      onClick={() => handleDelete(k)}
+                      disabled={deletingId === k.id}
+                      className="shrink-0 rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+                      aria-label="Sil"
+                    >
+                      {deletingId === k.id ? (
+                        <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-red-400" />
+                      ) : (
+                        <span className="text-base leading-none">🗑</span>
+                      )}
+                    </button>
+                  </div>
                 </CardSpotlight>
               </m.div>
             ))}

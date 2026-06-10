@@ -58,7 +58,7 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
     setOdevLoading(true);
     const { error } = await supabase.from("assignments").insert([{ lesson_id: secilenDersId, title: odevBaslik, description: odevAciklama, status: "verildi" }]);
     setOdevLoading(false);
-    if (error) { toast.error("Hata: " + error.message); return; }
+    if (error) { toast.error("Ödev verilemedi. Lütfen tekrar deneyin."); return; }
     toast.success("Ödev verildi.");
     setSecilenDersId(""); setOdevBaslik(""); setOdevAciklama("");
     queryClient.invalidateQueries({ queryKey: ["assignments"] });
@@ -68,17 +68,17 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
   const odeviReddet = async (odevId: string, filePath: string | null) => {
     if (!rejectionReason.trim()) { toast.error("Lütfen reddetme sebebini yazın."); return; }
     try {
-      if (filePath) {
-        const { error: storageError } = await supabase.storage.from("kaynaklar").remove([filePath]);
-        if (storageError) console.error("Dosya silinemedi:", storageError);
-      }
-      await updateMutation.mutateAsync({ id: odevId, status: "reddedildi", rejectionReason });
-      await supabase.from("assignments").update({ submission_text: null, submission_file_path: null, submitted_at: null }).eq("id", odevId);
+      await updateMutation.mutateAsync({ id: odevId, status: "reddedildi", rejectionReason, clearSubmission: true });
       toast.success("Ödev reddedildi.");
       setRejectingId(null);
       setRejectionReason("");
-    } catch (err: unknown) {
-      toast.error("Hata: " + (err as Error).message);
+      if (filePath) {
+        supabase.storage.from("kaynaklar").remove([filePath]).then(({ error }) => {
+          if (error) console.error("Dosya silinemedi:", error);
+        });
+      }
+    } catch {
+      toast.error("Ödev reddedilemedi. Lütfen tekrar deneyin.");
     }
   };
 
@@ -89,8 +89,8 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
       await updateMutation.mutateAsync({ id: odevId, status: "yapildi", score: Math.round(n) });
       toast.success(`Puan kaydedildi: ${Math.round(n)} / 100`);
       setGradingId(null);
-    } catch (err: unknown) {
-      toast.error("Hata: " + (err as Error).message);
+    } catch {
+      toast.error("Puan kaydedilemedi. Lütfen tekrar deneyin.");
     }
   };
 
@@ -101,8 +101,8 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
         <form onSubmit={odevVer} className="space-y-3">
           <select value={secilenDersId} onChange={(e) => setSecilenDersId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500">
             <option value="">Hangi Ders İçin?</option>
-            {dersler.filter((d) => d.status === "bekliyor").map((d) => (
-              <option key={d.id} value={d.id}>{d.users?.email} - {new Date(d.lesson_date).toLocaleDateString()}</option>
+            {dersler.filter((d) => d.status === "bekliyor" || d.status === "tamamlandi").map((d) => (
+              <option key={d.id} value={d.id}>{d.users?.email} - {new Date(d.lesson_date).toLocaleDateString()} {d.status === "tamamlandi" ? "(Tamamlandı)" : ""}</option>
             ))}
           </select>
           <input type="text" placeholder="Ödev Başlığı" value={odevBaslik} onChange={(e) => setOdevBaslik(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-500" />
@@ -134,7 +134,7 @@ export default function OdevYonetimi({ dersler, onAwardXp }: Props) {
                 const isRejected = o.status === "reddedildi";
                 const isGrading = gradingId === o.id;
                 const isRejectingThis = rejectingId === o.id;
-                const palette = scorePalette(scoreInput);
+                const palette = isGrading ? scorePalette(scoreInput) : scorePalette(80);
 
                 return (
                   <m.div

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
@@ -85,12 +86,11 @@ function Avatar({ c, size = "md" }: { c: Contact; size?: "sm" | "md" | "lg" }) {
   const col = userColor(c.id);
   return (
     <div
-      className={`${dim} shrink-0 rounded-2xl grid place-items-center font-black text-white overflow-hidden ring-2 ring-white/10`}
+      className={`relative ${dim} shrink-0 rounded-2xl grid place-items-center font-black text-white overflow-hidden ring-2 ring-white/10`}
       style={c.avatar_url ? undefined : { background: `linear-gradient(135deg, ${col.from}, ${col.to})` }}
     >
       {c.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={c.avatar_url} alt="" className="h-full w-full object-cover" />
+        <Image src={c.avatar_url} alt="" fill className="object-cover" unoptimized />
       ) : (
         <span>{initials(c.full_name, c.email)}</span>
       )}
@@ -125,10 +125,12 @@ export default function Mesajlar({ userId, role }: Props) {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
   const [contactSearch, setContactSearch] = useState("");
+  const [isContactOnline, setIsContactOnline] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedContactRef = useRef<Contact | null>(null);
   const contactsRef = useRef<Contact[]>([]);
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => { selectedContactRef.current = selectedContact; }, [selectedContact]);
   useEffect(() => { contactsRef.current = contacts; }, [contacts]);
@@ -262,6 +264,39 @@ export default function Mesajlar({ userId, role }: Props) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
+
+  /* ── 3b) Presence channel: online/offline tracking ── */
+  useEffect(() => {
+    if (!userId) return;
+    const ch = supabase.channel("presence-messaging", {
+      config: { presence: { key: userId } },
+    });
+    presenceChannelRef.current = ch;
+
+    ch.on("presence", { event: "sync" }, () => {
+      const state = ch.presenceState();
+      const active = selectedContactRef.current;
+      setIsContactOnline(active ? active.id in state : false);
+    }).subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await ch.track({ user_id: userId, online_at: new Date().toISOString() });
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(ch);
+      presenceChannelRef.current = null;
+    };
+  }, [userId]);
+
+  /* ── 3c) Update online status when selected contact changes ── */
+  useEffect(() => {
+    if (!selectedContact) { setIsContactOnline(false); return; }
+    const ch = presenceChannelRef.current;
+    if (!ch) return;
+    const state = ch.presenceState();
+    setIsContactOnline(selectedContact.id in state);
+  }, [selectedContact]);
 
   /* ── 4) Auto-scroll to bottom ── */
   useEffect(() => {
@@ -508,10 +543,12 @@ export default function Mesajlar({ userId, role }: Props) {
                 <p className="truncate text-sm font-bold text-white/85">
                   {displayName(selectedContact)}
                 </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <p className="text-xs text-white/30">Çevrimiçi</p>
-                </div>
+                {isContactOnline && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_1px_rgba(52,211,153,0.6)]" />
+                    <span className="text-[10px] font-medium text-emerald-400">Çevrimiçi</span>
+                  </div>
+                )}
               </div>
             </header>
 

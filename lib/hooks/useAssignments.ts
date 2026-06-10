@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { gradeAssignment, rejectAssignment } from "@/app/actions/assignments";
 import type { Assignment, AssignmentStatus, Role } from "@/lib/types";
 import { QUERY_STALE } from "@/lib/constants";
 
@@ -37,25 +38,59 @@ export function useUpdateAssignmentStatus() {
       status,
       rejectionReason,
       score,
+      clearSubmission,
     }: {
       id: string;
       status: AssignmentStatus;
       rejectionReason?: string;
       score?: number;
+      clearSubmission?: boolean;
     }) => {
-      const { error } = await supabase
-        .from("assignments")
-        .update({ status, rejection_reason: rejectionReason ?? null, score: score ?? null })
-        .eq("id", id);
-      if (error) throw error;
+      if (status === "yapildi" && score !== undefined) {
+        const result = await gradeAssignment(id, score);
+        if (result.error) throw new Error(result.error);
+      } else if (status === "reddedildi") {
+        const result = await rejectAssignment(id, rejectionReason ?? "", clearSubmission ?? false);
+        if (result.error) throw new Error(result.error);
+      } else {
+        type AssignmentUpdate = {
+          status: AssignmentStatus;
+          rejection_reason: string | null;
+          score: number | null;
+          submission_text?: null;
+          submission_file_path?: null;
+          submitted_at?: null;
+        };
+        const updates: AssignmentUpdate = {
+          status,
+          rejection_reason: rejectionReason ?? null,
+          score: score ?? null,
+          ...(clearSubmission
+            ? { submission_text: null, submission_file_path: null, submitted_at: null }
+            : {}),
+        };
+        const { error } = await supabase
+          .from("assignments")
+          .update(updates)
+          .eq("id", id);
+        if (error) throw error;
+      }
     },
-    onMutate: async ({ id, status, rejectionReason, score }) => {
+    onMutate: async ({ id, status, rejectionReason, score, clearSubmission }) => {
       await queryClient.cancelQueries({ queryKey: ["assignments"] });
       const cachedQueries = queryClient.getQueriesData<Assignment[]>({ queryKey: ["assignments"] });
       queryClient.setQueriesData<Assignment[]>({ queryKey: ["assignments"] }, (old) =>
         old?.map((a) =>
           a.id === id
-            ? { ...a, status, rejection_reason: rejectionReason ?? null, score: score ?? null }
+            ? {
+                ...a,
+                status,
+                rejection_reason: rejectionReason ?? null,
+                score: score ?? null,
+                ...(clearSubmission
+                  ? { submission_text: null, submission_file_path: null, submitted_at: null }
+                  : {}),
+              }
             : a
         ) ?? []
       );

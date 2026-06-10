@@ -2,6 +2,7 @@
 
 import { AnimatePresence, m } from "framer-motion";
 import { useState, useTransition, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 
 export type TabDef = {
   id: string;
@@ -26,7 +27,12 @@ export default function Tabs({
   accent?: Accent;
   defaultTab?: string;
 }) {
-  const [activeId, setActiveId] = useState<string>(defaultTab ?? tabs[0]?.id);
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") ?? undefined;
+  const initialTab = (tabFromUrl && tabs.some((t) => t.id === tabFromUrl) ? tabFromUrl : null)
+    ?? defaultTab
+    ?? tabs[0]?.id;
+  const [activeId, setActiveId] = useState<string>(initialTab);
   const [isPending, startTransition] = useTransition();
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
   const a = accentClasses[accent];

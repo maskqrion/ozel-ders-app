@@ -1,8 +1,21 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
 import { AlertOctagon } from "lucide-react";
 
-export default function GlobalError({ reset }: { error: Error; reset: () => void }) {
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    // Sentry DSN yoksa captureException sessizce atlanır
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <html lang="tr">
       <body>
@@ -31,3 +44,4 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
     </html>
   );
 }
+

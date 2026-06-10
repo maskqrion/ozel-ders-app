@@ -10,7 +10,7 @@ type Accent = "blue" | "green";
 type Lesson = {
   id: string;
   lesson_date: string;
-  status: "bekliyor" | "tamamlandi";
+  status: "bekliyor" | "tamamlandi" | "iptal";
 };
 
 type Props = {

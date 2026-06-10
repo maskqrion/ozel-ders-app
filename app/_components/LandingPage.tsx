@@ -224,13 +224,6 @@ function HeroGrid() {
 }
 
 function Hero({ hocaCount }: { hocaCount: number }) {
-  const [activeCount, setActiveCount] = useState(Math.max(3, Math.floor(hocaCount * 0.4)));
-  useEffect(() => {
-    const id = setInterval(() => {
-      setActiveCount((n) => Math.max(3, Math.min(Math.max(5, hocaCount), n + Math.round((Math.random() - 0.5) * 2))));
-    }, 3200);
-    return () => clearInterval(id);
-  }, [hocaCount]);
 
   return (
     <section className="relative isolate overflow-hidden text-white">
@@ -246,7 +239,7 @@ function Hero({ hocaCount }: { hocaCount: number }) {
               <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-70" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
             </span>
-            Şu an <strong className="font-semibold text-emerald-300 tabular-nums mx-1">{activeCount}</strong> öğretmen çevrimiçi
+            <strong className="font-semibold text-emerald-300 tabular-nums mx-1">{hocaCount}</strong> doğrulanmış öğretmen platformumuzda
           </div>
         </Reveal>
 
@@ -297,12 +290,11 @@ function Hero({ hocaCount }: { hocaCount: number }) {
 
 // ─── LiveStats ────────────────────────────────────────────────────────────────
 
-type StatDef = { key: string; label: string; format: 'n' | 'f'; live?: boolean };
+type StatDef = { key: string; label: string; format: 'n' | 'f' };
 
 const STAT_DEFS: StatDef[] = [
   { key: 'hocalar', label: 'Doğrulanmış eğitmen', format: 'n' },
   { key: 'dersler', label: 'Tamamlanan ders', format: 'n' },
-  { key: 'dakikalar', label: 'Bugün öğrenilen dakika', format: 'n' },
   { key: 'puan', label: 'Ortalama ders puanı', format: 'f' },
 ];
 
@@ -311,15 +303,6 @@ function StatItem({ def, value }: { def: StatDef; value: number }) {
   const display = def.format === 'f' ? animated.toFixed(2) : formatNumber(animated);
   return (
     <div className="relative flex flex-col gap-1.5 px-6 py-7 md:py-9">
-      <div className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.12em] text-blue-900/55 font-medium">
-        {def.live && (
-          <span className="relative flex h-1.5 w-1.5 mr-0.5">
-            <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-          </span>
-        )}
-        Bugün
-      </div>
       <div className="text-[44px] md:text-[56px] leading-[1] font-semibold tracking-[-0.03em] text-emerald-600 tabular-nums">{display}</div>
       <div className="text-[14px] text-blue-900/75">{def.label}</div>
     </div>
@@ -327,36 +310,18 @@ function StatItem({ def, value }: { def: StatDef; value: number }) {
 }
 
 function LiveStats({ hocaCount, lessonCount }: { hocaCount: number; lessonCount: number }) {
-  const [vals, setVals] = useState({
+  const vals = {
     hocalar: hocaCount,
     dersler: lessonCount,
-    dakikalar: Math.max(240, lessonCount * 45),
     puan: 4.86,
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setVals((v) => ({
-        ...v,
-        dakikalar: v.dakikalar + (Math.random() < 0.7 ? Math.floor(Math.random() * 3) : 0),
-      }));
-    }, 3500);
-    return () => clearInterval(timer);
-  }, []);
+  };
 
   return (
     <section className="bg-blue-50/60 border-y border-blue-100">
       <div className="mx-auto max-w-7xl px-5 md:px-8 py-4 md:py-6">
         <Reveal>
-          <div className="flex items-center justify-between mb-2 px-1">
-            <div className="flex items-center gap-2 text-[12.5px] text-blue-900/75">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-70" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              Platform metrikleri · gerçek zamanlı
-            </div>
-            <div className="text-[12px] text-blue-900/55 font-mono">son güncelleme · şimdi</div>
+          <div className="mb-2 px-1">
+            <div className="text-[12.5px] text-blue-900/75">Toplam platform istatistikleri</div>
           </div>
         </Reveal>
         <Reveal delay={80}>
@@ -642,10 +607,25 @@ function FinalCTA() {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 function Footer() {
-  const cols: { title: string; items: string[] }[] = [
-    { title: 'Ürün', items: ['Öğretmen Bul', 'Nasıl Çalışır?', 'Fiyatlandırma', 'Mobil Uygulama'] },
-    { title: 'Şirket', items: ['Hakkımızda', 'Kariyer', 'Basın', 'İletişim'] },
-    { title: 'Yardım', items: ['Destek', 'Güvenlik · KVKK', 'Sıkça Sorulanlar', 'Topluluk'] },
+  const cols: { title: string; items: { label: string; href: string }[] }[] = [
+    { title: 'Ürün', items: [
+      { label: 'Öğretmen Bul', href: '#ogretmenler' },
+      { label: 'Nasıl Çalışır?', href: '#' },
+      { label: 'Fiyatlandırma', href: '#' },
+      { label: 'Mobil Uygulama', href: '#' },
+    ]},
+    { title: 'Şirket', items: [
+      { label: 'Hakkımızda', href: '#' },
+      { label: 'Kariyer', href: '#' },
+      { label: 'Basın', href: '#' },
+      { label: 'İletişim', href: 'mailto:destek@ozelderspro.com' },
+    ]},
+    { title: 'Yardım', items: [
+      { label: 'Destek', href: 'mailto:destek@ozelderspro.com' },
+      { label: 'Güvenlik · KVKK', href: '/kvkk' },
+      { label: 'Sıkça Sorulanlar', href: '#' },
+      { label: 'Topluluk', href: '#' },
+    ]},
   ];
 
   return (
@@ -674,7 +654,7 @@ function Footer() {
               <div className="text-[13px] text-white font-semibold mb-3">{col.title}</div>
               <ul className="space-y-2 text-[13.5px]">
                 {col.items.map((item) => (
-                  <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
+                  <li key={item.label}><a href={item.href} className="hover:text-white transition-colors">{item.label}</a></li>
                 ))}
               </ul>
             </div>
@@ -684,9 +664,9 @@ function Footer() {
         <div className="mt-12 pt-6 border-t border-blue-900/50 flex flex-col md:flex-row gap-4 md:items-center md:justify-between text-[12.5px]">
           <div>© {new Date().getFullYear()} Özel Ders Pro. Tüm hakları saklıdır.</div>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-white">Kullanım Şartları</a>
-            <a href="#" className="hover:text-white">Gizlilik</a>
-            <a href="#" className="hover:text-white">Çerezler</a>
+            <a href="/kullanim-kosullari" className="hover:text-white">Kullanım Koşulları</a>
+            <a href="/gizlilik" className="hover:text-white">Gizlilik</a>
+            <a href="/kvkk" className="hover:text-white">KVKK</a>
           </div>
         </div>
       </div>

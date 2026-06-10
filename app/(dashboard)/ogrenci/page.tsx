@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -12,15 +12,21 @@ import { supabase } from "@/lib/supabase/client";
 import { attachSignedUrls } from "@/lib/storage";
 import type { UserProfile, Lesson, Assignment, Resource } from "@/lib/types";
 import { LoaderOne } from "@/components/ui/loader";
+import { awardHocaXp } from "@/app/actions/xp";
 
 import Tabs, { type TabDef } from "@/components/dashboard/Tabs";
 import GenelOzet from "@/components/dashboard/ogrenci/GenelOzet";
 import Odevlerim from "@/components/dashboard/ogrenci/Odevlerim";
 import DersTakvimi from "@/components/dashboard/ogrenci/DersTakvimi";
 import Kaynaklar from "@/components/dashboard/ogrenci/Kaynaklar";
+import CuzdanOzet from "@/components/dashboard/ogrenci/CuzdanOzet";
 import NotificationBell from "@/components/dashboard/shared/NotificationBell";
 
 const OgretmenBul = dynamic(() => import("@/components/dashboard/ogrenci/OgretmenBul"), { ssr: false });
+
+const OGRENCI_XP_ACTION_MAP: Record<string, "odev_teslim"> = {
+  "Ödev teslim edildi": "odev_teslim",
+};
 const Mesajlar = dynamic(() => import("@/components/dashboard/shared/Mesajlar"), { ssr: false });
 
 export default function OgrenciPaneli() {
@@ -33,11 +39,12 @@ export default function OgrenciPaneli() {
   const [kaynaklar, setKaynaklar] = useState<Resource[]>([]);
   const [siradakiDers, setSiradakiDers] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
+  const lessonIdsRef = useRef<Set<string>>(new Set());
 
   const fetchDersler = useCallback(async (ogrenciId: string) => {
     const { data } = await supabase
       .from("lessons")
-      .select(`id, hoca_id, ogrenci_id, lesson_date, status, users!lessons_hoca_id_fkey (email)`)
+      .select(`id, hoca_id, ogrenci_id, lesson_date, status, hoca:users!lessons_hoca_id_fkey (email, full_name)`)
       .eq("ogrenci_id", ogrenciId)
       .order("lesson_date", { ascending: true });
     if (data) {
@@ -61,8 +68,21 @@ export default function OgrenciPaneli() {
     }
   }, []);
 
-  const fetchKaynaklar = useCallback(async () => {
-    const { data } = await supabase.from("resources").select("*").order("created_at", { ascending: false });
+  const fetchKaynaklar = useCallback(async (ogrenciId: string) => {
+    const { data: connections } = await supabase
+      .from("teacher_students")
+      .select("hoca_id")
+      .eq("ogrenci_id", ogrenciId);
+    if (!connections || connections.length === 0) {
+      setKaynaklar([]);
+      return;
+    }
+    const hocaIds = connections.map((c: { hoca_id: string }) => c.hoca_id);
+    const { data } = await supabase
+      .from("resources")
+      .select("*")
+      .in("yukleyen_id", hocaIds)
+      .order("created_at", { ascending: false });
     if (data) {
       const enriched = await attachSignedUrls(data, "file_path", "signed_url");
       setKaynaklar(enriched as unknown as Resource[]);
@@ -96,7 +116,7 @@ export default function OgrenciPaneli() {
           .single();
         if (profileData) setProfile(profileData as UserProfile);
 
-        await Promise.all([fetchDersler(currentUser.id), fetchOdevler(currentUser.id), fetchKaynaklar()]);
+        await Promise.all([fetchDersler(currentUser.id), fetchOdevler(currentUser.id), fetchKaynaklar(currentUser.id)]);
         setLoading(false);
       } catch (err) {
         console.error("Beklenmedik hata:", err);
@@ -108,9 +128,11 @@ export default function OgrenciPaneli() {
   }, [router, fetchDersler, fetchOdevler, fetchKaynaklar]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    lessonIdsRef.current = new Set(dersler.map((d) => d.id));
+  }, [dersler]);
 
-    const ogrenciLessonIds = new Set(dersler.map((d) => d.id));
+  useEffect(() => {
+    if (!user?.id) return;
 
     const channel = supabase
       .channel(`ogrenci-bildirimler-${user.id}`)
@@ -118,15 +140,22 @@ export default function OgrenciPaneli() {
         "postgres_changes",
         { event: "*", schema: "public", table: "assignments" },
         (payload) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const p = payload as any;
-          const lessonId = p.new?.lesson_id ?? p.old?.lesson_id;
-          if (!ogrenciLessonIds.has(lessonId)) return;
+          const newRow = payload.new as Record<string, unknown> | undefined;
+          const oldRow = payload.old as Record<string, unknown> | undefined;
+          const lessonId = (newRow?.lesson_id ?? oldRow?.lesson_id) as string | undefined;
+          if (!lessonId || !lessonIdsRef.current.has(lessonId)) return;
 
           if (payload.eventType === "INSERT") {
             toast("📚 Yeni bir ödev verildi!", { icon: "🔔", duration: 4000 });
-          } else if (payload.eventType === "UPDATE" && p.new?.status === "reddedildi") {
-            toast.error("❌ Bir ödeviniz reddedildi!");
+          } else if (payload.eventType === "UPDATE") {
+            const status = newRow?.status as string | undefined;
+            const newScore = newRow?.score as number | null | undefined;
+            const oldScore = oldRow?.score as number | null | undefined;
+            if (status === "reddedildi") {
+              toast.error("❌ Bir ödeviniz reddedildi!");
+            } else if (newScore != null && (oldScore == null || oldScore === undefined)) {
+              toast.success("✅ Bir ödeviniz puanlandı!");
+            }
           }
           fetchOdevler(user.id);
         },
@@ -136,7 +165,7 @@ export default function OgrenciPaneli() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchOdevler, dersler]);
+  }, [user?.id, fetchOdevler]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -144,9 +173,13 @@ export default function OgrenciPaneli() {
   };
 
   const onAwardXp = useCallback(
-    async (amount: number, action: string) => {
+    async (_amount: number, action: string) => {
       if (!user?.id) return;
-      toast.success(`+${amount} XP — ${action}`, {
+      const actionKey = OGRENCI_XP_ACTION_MAP[action];
+      if (!actionKey) return;
+      const result = await awardHocaXp(actionKey);
+      if (!result.ok) return;
+      toast.success(`+${_amount} XP — ${action}`, {
         icon: "✨",
         duration: 2500,
         style: {
@@ -156,13 +189,10 @@ export default function OgrenciPaneli() {
           fontWeight: 600,
         },
       });
-      const { data } = await supabase.rpc("add_user_xp", { amount });
-      if (!data) return;
-      const xpData = data as { level: number; xp: number };
       setProfile((prev) => {
         if (!prev) return prev;
-        if (xpData.level > prev.level) {
-          toast(`🎉 Seviye atladın! Lv ${xpData.level}'e ulaştın.`, {
+        if (result.level > prev.level) {
+          toast(`🎉 Seviye atladın! Lv ${result.level}'e ulaştın.`, {
             icon: "🚀",
             duration: 4500,
             style: {
@@ -173,7 +203,7 @@ export default function OgrenciPaneli() {
             },
           });
         }
-        return { ...prev, level: xpData.level, xp: xpData.xp };
+        return { ...prev, level: result.level, xp: result.xp };
       });
     },
     [user?.id],
@@ -227,6 +257,12 @@ export default function OgrenciPaneli() {
         label: "Kaynaklar",
         icon: "📚",
         content: <Kaynaklar kaynaklar={kaynaklar} />,
+      },
+      {
+        id: "cuzdan",
+        label: "Cüzdanım",
+        icon: "💳",
+        content: <CuzdanOzet userId={user.id} />,
       },
     ];
   }, [user?.id, siradakiDers, odevler, dersler, kaynaklar, fetchDersler, fetchOdevler, onAwardXp]);

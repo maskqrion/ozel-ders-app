@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
+import { simulateDeposit } from "@/app/actions/wallet";
+import { initiate3DSecureDeposit, type PaymentCard } from "@/app/actions/payment";
 
 /* ── Types ──────────────────────────────────────────────────── */
 type TxType   = "bakiye_yukleme" | "dersten_kazanc" | "ders_odeme" | "iade";
@@ -177,8 +179,11 @@ const STATUS_CFG: Record<
 /* ═══════════════════════════════════════════════════════════════
    PAGE
 ═══════════════════════════════════════════════════════════════ */
+type PaymentMode = "simulate" | "card";
+
 export default function CuzdanPage() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
   const [userId,       setUserId]       = useState<string | null>(null);
   const [balance,      setBalance]      = useState(0);
@@ -188,6 +193,18 @@ export default function CuzdanPage() {
   const [depositing,   setDepositing]   = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [customAmount,   setCustomAmount]   = useState("");
+
+  // 3DS card form state
+  const isIyzicoEnabled = process.env.NEXT_PUBLIC_IYZICO_ENABLED === "true";
+  const [paymentMode,  setPaymentMode]  = useState<PaymentMode>(isIyzicoEnabled ? "card" : "simulate");
+  const [cardHolder,   setCardHolder]   = useState("");
+  const [cardNumber,   setCardNumber]   = useState("");
+  const [expireMonth,  setExpireMonth]  = useState("");
+  const [expireYear,   setExpireYear]   = useState("");
+  const [cvc,          setCvc]          = useState("");
+
+  // 3DS iframe
+  const [tdsHtml,      setTdsHtml]      = useState<string | null>(null);
 
   /* ── Fetch transactions only (used after deposit) ── */
   const fetchTransactions = useCallback(async (uid: string) => {
@@ -241,8 +258,38 @@ export default function CuzdanPage() {
     init();
   }, [router, fetchData]);
 
-  /* ── Deposit handler ── */
-  const handleDeposit = async () => {
+  /* ── 3DS callback sonucu ── */
+  const callbackSuccess = searchParams.get("success");
+  const callbackError   = searchParams.get("error");
+
+  useEffect(() => {
+    if (!userId) return;
+    if (callbackSuccess === "1") {
+      toast.success("Ödeme başarılı! Bakiyeniz güncellendi.", { icon: "🔒" });
+      fetchData(userId);
+    } else if (callbackError) {
+      const msgs: Record<string, string> = {
+        "3ds_failed":          "3D Secure doğrulaması başarısız.",
+        "payment_failed":      "Ödeme tamamlanamadı. Lütfen tekrar deneyin.",
+        "deposit_failed":      "Bakiye güncellenemedi. Destek ekibiyle iletişime geçin.",
+        "intent_not_found":    "Ödeme oturumu bulunamadı. Lütfen tekrar deneyin.",
+        "unexpected":          "Beklenmeyen bir hata oluştu.",
+        "callback_parse":      "Ödeme yanıtı işlenemedi. Lütfen tekrar deneyin.",
+        "missing_conversation": "Ödeme oturumu eksik. Lütfen tekrar başlatın.",
+        "already_processed":   "Bu ödeme zaten işlendi.",
+      };
+      const msg = msgs[callbackError] ?? "Ödeme başarısız oldu.";
+      if (callbackError === "already_processed") {
+        toast(msg, { icon: "ℹ️" });
+        fetchData(userId);
+      } else {
+        toast.error(msg);
+      }
+    }
+  }, [userId, fetchData, callbackSuccess, callbackError]);
+
+  /* ── Simüle deposit ── */
+  const handleSimDeposit = async () => {
     const rawAmount = selectedPreset ?? parseFloat(customAmount.replace(",", "."));
     if (!userId || !rawAmount || rawAmount <= 0) {
       toast.error("Lütfen geçerli bir tutar seçin.");
@@ -251,31 +298,12 @@ export default function CuzdanPage() {
     if (depositing) return;
     setDepositing(true);
     try {
-      /* 1. Get current balance */
-      const { data: current, error: fetchErr } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("id", userId)
-        .maybeSingle();
-      if (fetchErr) throw fetchErr;
-
-      const newBalance = ((current?.balance as number) ?? 0) + rawAmount;
-
-      /* 2. Update balance */
-      const { error: upErr } = await supabase
-        .from("wallets")
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("id", userId);
-      if (upErr) throw upErr;
-
-      /* 3. Record transaction */
-      const { error: txErr } = await supabase
-        .from("wallet_transactions")
-        .insert({ wallet_id: userId, amount: rawAmount, type: "bakiye_yukleme", status: "tamamlandi", description: "Bakiye yükleme" });
-      if (txErr) throw txErr;
-
-      /* 3. Update local state */
-      setBalance(newBalance);
+      const result = await simulateDeposit(rawAmount);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setBalance(result.newBalance);
       setUpdatedAt(new Date().toISOString());
       await fetchTransactions(userId);
       setSelectedPreset(null);
@@ -284,14 +312,51 @@ export default function CuzdanPage() {
         icon: "💰",
         style: { background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", fontWeight: 600 },
       });
-    } catch (err: unknown) {
-      toast.error(
-        "Yükleme başarısız: " + ((err as { message?: string }).message ?? "Bilinmeyen hata"),
-      );
     } finally {
       setDepositing(false);
     }
   };
+
+  /* ── 3DS deposit ── */
+  const handle3DSDeposit = async () => {
+    const rawAmount = selectedPreset ?? parseFloat(customAmount.replace(",", "."));
+    if (!rawAmount || rawAmount <= 0) {
+      toast.error("Lütfen geçerli bir tutar seçin.");
+      return;
+    }
+    if (!cardHolder || !cardNumber || !expireMonth || !expireYear || !cvc) {
+      toast.error("Lütfen tüm kart bilgilerini doldurun.");
+      return;
+    }
+    if (depositing) return;
+    setDepositing(true);
+    try {
+      const card: PaymentCard = {
+        cardHolderName: cardHolder,
+        cardNumber:     cardNumber.replace(/\s/g, ""),
+        expireMonth,
+        expireYear,
+        cvc,
+      };
+      const result = await initiate3DSecureDeposit(rawAmount, card);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      // base64 decode → bank HTML
+      try {
+        const decoded = atob(result.htmlContent);
+        setTdsHtml(decoded);
+      } catch {
+        toast.error("3DS sayfası yüklenemedi. Lütfen tekrar deneyin.");
+      }
+    } finally {
+      setDepositing(false);
+    }
+  };
+
+  const handleDeposit = () =>
+    paymentMode === "simulate" ? handleSimDeposit() : handle3DSDeposit();
 
   const depositAmount = selectedPreset ?? (customAmount ? parseFloat(customAmount.replace(",", ".")) : null);
   const depositValid  = depositAmount !== null && depositAmount > 0 && !isNaN(depositAmount);
@@ -308,6 +373,47 @@ export default function CuzdanPage() {
   /* ── Page ── */
   return (
     <div className="min-h-screen bg-slate-50 pb-16 font-sans text-slate-800">
+
+      {/* ── 3DS iframe modal ── */}
+      <AnimatePresence>
+        {tdsHtml && (
+          <m.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 p-4"
+          >
+            <m.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md rounded-2xl bg-white overflow-hidden shadow-2xl"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <LockIcon size={16} strokeWidth={2} className="text-emerald-500" />
+                  <span className="font-semibold text-slate-800 text-sm">3D Secure Doğrulama</span>
+                </div>
+                <button
+                  onClick={() => setTdsHtml(null)}
+                  className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 text-sm font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="px-5 py-3 text-xs text-slate-500 bg-emerald-50 border-b border-emerald-100">
+                Bankanızın güvenlik sayfasına yönlendiriliyorsunuz. Bu pencereyi kapatmayın.
+              </p>
+              <iframe
+                srcDoc={tdsHtml}
+                className="w-full h-[420px] border-0"
+                sandbox="allow-forms allow-scripts allow-top-navigation allow-same-origin"
+                title="3D Secure Doğrulama"
+              />
+            </m.div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-emerald-100 bg-white px-6 py-4 shadow-sm">
@@ -443,6 +549,88 @@ export default function CuzdanPage() {
                 )}
               </AnimatePresence>
 
+              {/* ── Ödeme modu seçici ── */}
+              {isIyzicoEnabled && (
+                <div className="flex rounded-xl overflow-hidden border border-slate-200">
+                  {(["card", "simulate"] as PaymentMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setPaymentMode(mode)}
+                      className={`flex-1 py-2 text-xs font-semibold transition ${
+                        paymentMode === mode
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white text-slate-500 hover:bg-slate-50"
+                      }`}
+                    >
+                      {mode === "card" ? "🔒 Kredi Kartı (3DS)" : "🧪 Simülasyon"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Kart formu (3DS) ── */}
+              <AnimatePresence>
+                {paymentMode === "card" && (
+                  <m.div
+                    key="card-form"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-xs font-semibold text-slate-600 mb-1">Kart Bilgileri</p>
+                      <input
+                        type="text"
+                        placeholder="Kart Sahibi Adı Soyadı"
+                        value={cardHolder}
+                        onChange={(e) => setCardHolder(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                        autoComplete="cc-name"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Kart Numarası"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, "").slice(0, 16))}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono outline-none focus:border-emerald-400"
+                        autoComplete="cc-number"
+                        maxLength={16}
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Ay (01-12)"
+                          value={expireMonth}
+                          onChange={(e) => setExpireMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                          autoComplete="cc-exp-month"
+                          maxLength={2}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Yıl (YYYY)"
+                          value={expireYear}
+                          onChange={(e) => setExpireYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                          autoComplete="cc-exp-year"
+                          maxLength={4}
+                        />
+                        <input
+                          type="text"
+                          placeholder="CVC"
+                          value={cvc}
+                          onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
+                          autoComplete="cc-csc"
+                          maxLength={4}
+                        />
+                      </div>
+                    </div>
+                  </m.div>
+                )}
+              </AnimatePresence>
+
               <button
                 onClick={handleDeposit}
                 disabled={!depositValid || depositing}
@@ -458,18 +646,23 @@ export default function CuzdanPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z" />
                     </svg>
-                    Yükleniyor...
+                    {paymentMode === "card" ? "3DS hazırlanıyor..." : "Yükleniyor..."}
                   </span>
                 ) : (
                   <>
-                    <PlusIcon size={16} strokeWidth={2.5} />
-                    Bakiye Yükle
+                    {paymentMode === "card" ? (
+                      <><LockIcon size={16} strokeWidth={2.5} /> 3D Secure ile Öde</>
+                    ) : (
+                      <><PlusIcon size={16} strokeWidth={2.5} /> Bakiye Yükle</>
+                    )}
                   </>
                 )}
               </button>
 
               <p className="text-center text-xs text-slate-400">
-                Simülasyon modu — gerçek ödeme alınmaz
+                {paymentMode === "card"
+                  ? "256-bit SSL şifrelemeli güvenli ödeme · Kartınız kaydedilmez"
+                  : "Simülasyon modu — gerçek ödeme alınmaz"}
               </p>
             </div>
           </m.div>
@@ -571,9 +764,9 @@ export default function CuzdanPage() {
               <span>Tüm ödemeleriniz 3D Secure ile korunmaktadır</span>
             </div>
             <div className="flex items-center gap-5 text-sm text-slate-400">
-              <a href="#" className="transition hover:text-slate-700">Yardım</a>
-              <a href="#" className="transition hover:text-slate-700">Gizlilik</a>
-              <a href="#" className="transition hover:text-slate-700">Kullanım Koşulları</a>
+              <a href="mailto:destek@ozelderspro.com" className="transition hover:text-slate-700">Yardım</a>
+              <a href="/gizlilik" className="transition hover:text-slate-700">Gizlilik</a>
+              <a href="/kullanim-kosullari" className="transition hover:text-slate-700">Kullanım Koşulları</a>
             </div>
           </div>
         </div>

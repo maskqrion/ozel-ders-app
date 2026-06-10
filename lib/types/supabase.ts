@@ -73,6 +73,7 @@ export type Database = {
       invitations: {
         Row: {
           created_at: string | null
+          expires_at: string | null
           hoca_id: string
           id: string
           is_used: boolean | null
@@ -80,6 +81,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          expires_at?: string | null
           hoca_id: string
           id?: string
           is_used?: boolean | null
@@ -87,6 +89,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          expires_at?: string | null
           hoca_id?: string
           id?: string
           is_used?: boolean | null
@@ -108,6 +111,7 @@ export type Database = {
           hoca_id: string
           id: string
           lesson_date: string
+          meeting_room_id: string | null
           ogrenci_id: string
           payment_status: string
           price: number
@@ -118,6 +122,7 @@ export type Database = {
           hoca_id: string
           id?: string
           lesson_date: string
+          meeting_room_id?: string | null
           ogrenci_id: string
           payment_status?: string
           price?: number
@@ -128,6 +133,7 @@ export type Database = {
           hoca_id?: string
           id?: string
           lesson_date?: string
+          meeting_room_id?: string | null
           ogrenci_id?: string
           payment_status?: string
           price?: number
@@ -259,6 +265,54 @@ export type Database = {
           },
         ]
       }
+      quiz_attempts: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          id: string
+          quiz_id: string
+          score: number
+          student_id: string
+          total: number
+          xp_earned: number
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          id?: string
+          quiz_id: string
+          score?: number
+          student_id: string
+          total?: number
+          xp_earned?: number
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          id?: string
+          quiz_id?: string
+          score?: number
+          student_id?: string
+          total?: number
+          xp_earned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions: {
         Row: {
           correct_index: number
@@ -303,6 +357,8 @@ export type Database = {
           description: string | null
           hoca_id: string
           id: string
+          is_ai_generated: boolean
+          lesson_id: string | null
           title: string
         }
         Insert: {
@@ -310,6 +366,8 @@ export type Database = {
           description?: string | null
           hoca_id: string
           id?: string
+          is_ai_generated?: boolean
+          lesson_id?: string | null
           title: string
         }
         Update: {
@@ -317,6 +375,8 @@ export type Database = {
           description?: string | null
           hoca_id?: string
           id?: string
+          is_ai_generated?: boolean
+          lesson_id?: string | null
           title?: string
         }
         Relationships: [
@@ -325,6 +385,13 @@ export type Database = {
             columns: ["hoca_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
         ]
@@ -403,6 +470,126 @@ export type Database = {
           },
         ]
       }
+      teacher_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_hour: number
+          hoca_id: string
+          id: string
+          start_hour: number
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_hour: number
+          hoca_id: string
+          id?: string
+          start_hour: number
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_hour?: number
+          hoca_id?: string
+          id?: string
+          start_hour?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_availability_hoca_id_fkey"
+            columns: ["hoca_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_intents: {
+        Row: {
+          amount: number
+          conversation_id: string
+          created_at: string
+          error_message: string | null
+          expires_at: string
+          id: string
+          status: string
+          tx_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          conversation_id: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          status?: string
+          tx_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          conversation_id?: string
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          status?: string
+          tx_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      web_push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_students: {
         Row: {
           created_at: string | null
@@ -448,6 +635,7 @@ export type Database = {
           full_name: string | null
           hakkinda: string | null
           id: string
+          identity_number: string | null
           ilce: string | null
           level: number
           portfolio_url: string | null
@@ -464,6 +652,7 @@ export type Database = {
           full_name?: string | null
           hakkinda?: string | null
           id: string
+          identity_number?: string | null
           ilce?: string | null
           level?: number
           portfolio_url?: string | null
@@ -480,6 +669,7 @@ export type Database = {
           full_name?: string | null
           hakkinda?: string | null
           id?: string
+          identity_number?: string | null
           ilce?: string | null
           level?: number
           portfolio_url?: string | null
@@ -563,6 +753,23 @@ export type Database = {
     }
     Functions: {
       add_user_xp: { Args: { amount: number }; Returns: Json }
+      create_reservation: {
+        Args: {
+          p_hoca_id: string
+          p_lesson_date: string
+          p_ogrenci_id: string
+          p_price: number
+        }
+        Returns: string
+      }
+      deposit_wallet: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       award_xp: {
         Args: { p_amount: number; p_user_id: string }
         Returns: undefined
@@ -571,12 +778,24 @@ export type Database = {
         Args: { p_description: string; p_questions: Json; p_title: string }
         Returns: string
       }
+      hoca_complete_lesson: {
+        Args: { p_lesson_id: string }
+        Returns: undefined
+      }
       is_hoca: { Args: never; Returns: boolean }
       is_ogrenci: { Args: never; Returns: boolean }
       notify_upcoming_lessons: { Args: never; Returns: undefined }
       transfer_lesson_payment: {
         Args: { p_hoca_id: string; p_ogrenci_id: string; p_tutar: number }
         Returns: undefined
+      }
+      refund_lesson_payment: {
+        Args: { p_lesson_id: string; p_caller_id: string }
+        Returns: undefined
+      }
+      check_rate_limit: {
+        Args: { p_identifier: string; p_limit: number; p_window_ms: number }
+        Returns: { allowed: boolean; remaining: number; retry_after_ms: number }[]
       }
     }
     Enums: {

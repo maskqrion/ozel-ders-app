@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createServer } from "@/lib/supabase/server";
 
 /* ═══════════════════════════════════════════════════════════════
    Server-side Supabase (anon key — never ships to the client).
@@ -34,6 +36,7 @@ interface Review {
   rating: number;
   comment: string | null;
   created_at: string;
+  users: { full_name: string | null }[] | null;
 }
 
 /* ── Helpers ─────────────────────────────────────────────────  */
@@ -196,12 +199,15 @@ function Avatar({
 }) {
   if (profile.avatar_url) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={profile.avatar_url}
-        alt={profile.full_name ?? "Öğretmen"}
-        className={`${sizeCls} rounded-full object-cover ring-4 ring-white shadow-xl`}
-      />
+      <div className={`${sizeCls} relative rounded-full overflow-hidden ring-4 ring-white shadow-xl`}>
+        <Image
+          src={profile.avatar_url}
+          alt={profile.full_name ?? "Öğretmen"}
+          fill
+          className="object-cover"
+          sizes="128px"
+        />
+      </div>
     );
   }
   return (
@@ -213,7 +219,8 @@ function Avatar({
   );
 }
 
-export const dynamicParams = false;
+export const dynamicParams = true;
+export const revalidate = 3600;
 
 export async function generateStaticParams(): Promise<{ id: string }[]> {
   try {
@@ -271,6 +278,9 @@ export default async function HocaProfilPage({ params }: PageProps) {
   const { id } = await params;
   const db = serverDb();
 
+  const supabase = await createServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
   /* Parallel fetch: profile + reviews */
   const [profileRes, reviewsRes] = await Promise.all([
     db
@@ -281,7 +291,7 @@ export default async function HocaProfilPage({ params }: PageProps) {
       .maybeSingle(),
     db
       .from("reviews")
-      .select("id, rating, comment, created_at")
+      .select("id, rating, comment, created_at, users!reviews_ogrenci_id_fkey (full_name)")
       .eq("hoca_id", id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -293,6 +303,11 @@ export default async function HocaProfilPage({ params }: PageProps) {
   const reviews = (reviewsRes.data ?? []) as Review[];
   const avg     = avgRating(reviews);
   const location = [hoca.sehir, hoca.ilce].filter(Boolean).join(", ");
+
+  const SAFE_VIDEO_HOSTS = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\//;
+  const safeVideoUrl = hoca.video_url && SAFE_VIDEO_HOSTS.test(hoca.video_url)
+    ? hoca.video_url
+    : null;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -395,6 +410,37 @@ export default async function HocaProfilPage({ params }: PageProps) {
               </section>
             )}
 
+            {/* Video & Portfolyo */}
+            {(safeVideoUrl || hoca.portfolio_url) && (
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="mb-4 text-lg font-bold text-slate-900">Tanıtım & Portfolyo</h2>
+                <div className="space-y-4">
+                  {safeVideoUrl && (
+                    <div className="overflow-hidden rounded-xl border border-slate-100">
+                      <iframe
+                        src={safeVideoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "www.youtube.com/embed/")}
+                        title="Tanıtım videosu"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+                        className="aspect-video w-full"
+                      />
+                    </div>
+                  )}
+                  {hoca.portfolio_url && (
+                    <a
+                      href={hoca.portfolio_url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+                    >
+                      🔗 Portfolyoyu Gör →
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
+
             {/* Stats chips */}
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-lg font-bold text-slate-900">Profil Bilgileri</h2>
@@ -450,13 +496,12 @@ export default async function HocaProfilPage({ params }: PageProps) {
                     >
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
-                          {/* Anonymous reviewer */}
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                            Ö
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                            {initials(review.users?.[0]?.full_name ?? null)}
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-slate-700">
-                              Doğrulanmış Öğrenci
+                              {review.users?.[0]?.full_name ?? "Doğrulanmış Öğrenci"}
                             </p>
                             <p className="text-xs text-slate-400">{fmtDate(review.created_at)}</p>
                           </div>
@@ -521,14 +566,16 @@ export default async function HocaProfilPage({ params }: PageProps) {
 
                   {/* CTA */}
                   <Link
-                    href="/login"
+                    href={user ? "/ogrenci" : `/login?next=/hoca/${hoca.id}`}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-500/25 transition hover:-translate-y-px hover:shadow-lg hover:shadow-emerald-500/30 active:scale-[0.98]"
                   >
-                    Ders Talep Et
+                    {user ? "Ders Talep Et" : "Giriş Yap ve Ders Al"}
                     <ArrowRightIcon size={15} cls="text-white" />
                   </Link>
                   <p className="text-center text-xs text-slate-400">
-                    Giriş yaparak ders rezervasyonu oluşturabilirsiniz
+                    {user
+                      ? "Öğrenci panelinden rezervasyon oluşturabilirsiniz"
+                      : "Giriş yaparak ders rezervasyonu oluşturabilirsiniz"}
                   </p>
                 </div>
               </div>
@@ -579,28 +626,44 @@ export default async function HocaProfilPage({ params }: PageProps) {
             {[
               {
                 title: "Platform",
-                links: ["Nasıl Çalışır?", "Eğitmen Ol", "Fiyatlandırma"],
+                links: [
+                  { label: "Nasıl Çalışır?", href: "#" },
+                  { label: "Eğitmen Ol", href: "#" },
+                  { label: "Fiyatlandırma", href: "#" },
+                ],
               },
               {
                 title: "Destek",
-                links: ["Yardım Merkezi", "İletişim", "SSS"],
+                links: [
+                  { label: "Yardım Merkezi", href: "mailto:destek@ozelderspro.com" },
+                  { label: "İletişim", href: "mailto:destek@ozelderspro.com" },
+                  { label: "SSS", href: "#" },
+                ],
               },
               {
                 title: "Yasal",
-                links: ["Gizlilik Politikası", "Kullanım Koşulları", "KVKK"],
+                links: [
+                  { label: "Gizlilik Politikası", href: "/gizlilik" },
+                  { label: "Kullanım Koşulları", href: "/kullanim-kosullari" },
+                  { label: "KVKK", href: "/kvkk" },
+                ],
               },
               {
                 title: "Sosyal Medya",
-                links: ["Instagram", "Twitter", "LinkedIn"],
+                links: [
+                  { label: "Instagram", href: "#" },
+                  { label: "Twitter", href: "#" },
+                  { label: "LinkedIn", href: "#" },
+                ],
               },
             ].map((col) => (
               <div key={col.title}>
                 <h4 className="mb-3 text-sm font-semibold text-slate-800">{col.title}</h4>
                 <ul className="space-y-2">
                   {col.links.map((l) => (
-                    <li key={l}>
-                      <a href="#" className="text-sm text-slate-500 transition hover:text-slate-800">
-                        {l}
+                    <li key={l.label}>
+                      <a href={l.href} className="text-sm text-slate-500 transition hover:text-slate-800">
+                        {l.label}
                       </a>
                     </li>
                   ))}

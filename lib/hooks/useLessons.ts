@@ -4,8 +4,9 @@ import type { Lesson, LessonStatus, Role } from "@/lib/types";
 import { QUERY_STALE } from "@/lib/constants";
 
 const LESSON_SELECT = `
-  id, hoca_id, ogrenci_id, lesson_date, status,
-  users!lessons_ogrenci_id_fkey(email)
+  id, hoca_id, ogrenci_id, lesson_date, status, meeting_room_id,
+  users!lessons_ogrenci_id_fkey(email, full_name),
+  hoca:users!lessons_hoca_id_fkey(email, full_name)
 `;
 
 export function useLessons(userId?: string, role?: Role) {

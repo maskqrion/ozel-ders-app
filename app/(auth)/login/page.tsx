@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { AnimatePresence, m } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -9,7 +9,8 @@ import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/utils/errorHandler";
 import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
-import { useRouter } from "next/navigation";
+import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "@/app/actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Role = "ogrenci" | "hoca";
 
@@ -583,62 +584,51 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [accept, setAccept] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [isGooglePending, startGoogleTransition] = useTransition();
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
+
+  const safePush = (userRole: string) => {
+    if (nextParam && /^\/[^/]/.test(nextParam)) {
+      router.push(nextParam);
+    } else {
+      router.push(userRole === "hoca" ? "/hoca" : "/ogrenci");
+    }
+  };
 
   const switchMode = (next: boolean) => {
     setIsLogin(next);
   };
 
-  /* --- Supabase auth logic --- */
+  /* --- Auth logic (rate limit korumalı server action’lar üzerinden) --- */
   const handleAuth = async ({ email, password }: LoginFormValues) => {
-    try {
-      if (isLogin) {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) throw signInError;
-
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", data.user.id)
-          .single();
-
-        if (userError) throw userError;
-
-        toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
-
-        if (userData.role === "hoca") {
-          router.push("/hoca");
-        } else {
-          router.push("/ogrenci");
-        }
-      } else {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              role: role,
-              full_name: name.trim() || null,
-            },
-          },
-        });
-
-        if (signUpError) throw signUpError;
-
-        if (data.user) {
-          toast.success("Kayıt başarılı! Şimdi giriş yapabilirsin.");
-          setIsLogin(true);
-          reset();
-          setName("");
-        }
+    if (isLogin) {
+      const result = await signInWithEmail(email, password);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
       }
-    } catch (err: unknown) {
-      toast.error(getErrorMessage(err));
+      toast.success("Giriş başarılı, yönlendiriliyorsunuz...");
+      safePush(result.role);
+    } else {
+      const result = await signUpWithEmail(email, password, role, name.trim() || null);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      // Sign-in session’u client-side’da başlat (cookie için)
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        toast.success("Kayıt başarılı! Şimdi giriş yapabilirsin.");
+        setIsLogin(true);
+        reset();
+        setName("");
+        return;
+      }
+      toast.success("Kayıt başarılı! Giriş yapılıyor...");
+      safePush(role);
     }
   };
 
@@ -706,10 +696,25 @@ export default function LoginPage() {
                 {/* Google */}
                 <button
                   type="button"
-                  className="mt-7 w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition"
-                  onClick={() => toast("Google ile giriş yakında aktif olacak.", { icon: "🔜" })}
+                  disabled={isGooglePending}
+                  className="mt-7 w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-semibold text-slate-800 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() =>
+                    startGoogleTransition(async () => {
+                      const result = await signInWithGoogle(nextParam);
+                      if (result && !result.ok) toast.error(result.error);
+                    })
+                  }
                 >
-                  <GoogleIcon size={18} />
+                  {isGooglePending ? (
+                    <m.span
+                      aria-hidden
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                      className="inline-block h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-600"
+                    />
+                  ) : (
+                    <GoogleIcon size={18} />
+                  )}
                   Google ile {isLogin ? "giriş yap" : "devam et"}
                 </button>
 

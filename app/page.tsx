@@ -21,7 +21,7 @@ export default async function Page() {
       .limit(4),
     supabase
       .from('reviews')
-      .select('id, rating, comment, created_at, ogrenci_id')
+      .select('id, rating, comment, created_at, ogrenci_id, users!ogrenci_id(full_name)')
       .gte('rating', 4)
       .order('rating', { ascending: false })
       .order('created_at', { ascending: false })
@@ -34,33 +34,21 @@ export default async function Page() {
   // Cast tutor rows — columns confirmed in generated schema
   const topTutors = (tutorsRes.data ?? []) as TopTutor[];
 
-  // Fetch reviewer names in a single IN query
-  const rawReviews = reviewsRes.data ?? [];
-  const ogrenciIds = [
-    ...new Set(
-      rawReviews
-        .map((r) => r.ogrenci_id)
-        .filter((id): id is string => typeof id === 'string'),
-    ),
-  ];
-
-  const nameMap: Record<string, string | null> = {};
-  if (ogrenciIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('users')
-      .select('id, full_name')
-      .in('id', ogrenciIds);
-    for (const p of profiles ?? []) {
-      nameMap[p.id] = p.full_name;
-    }
-  }
-
+  type RawReviewRow = {
+    id: string;
+    rating: number;
+    comment: string | null;
+    created_at: string;
+    ogrenci_id: string;
+    users: { full_name: string | null } | null;
+  };
+  const rawReviews = (reviewsRes.data ?? []) as unknown as RawReviewRow[];
   const reviews: ReviewItem[] = rawReviews.map((r) => ({
     id: r.id,
     rating: r.rating,
     comment: r.comment,
     created_at: r.created_at,
-    ogrenci_name: r.ogrenci_id != null ? (nameMap[r.ogrenci_id] ?? null) : null,
+    ogrenci_name: r.users?.full_name ?? null,
   }));
 
   return (

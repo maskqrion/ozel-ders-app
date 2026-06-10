@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase/client";
 import { useProfile } from "@/lib/hooks/useProfile";
-import { useLessons, useUpdateLessonStatus } from "@/lib/hooks/useLessons";
+import { useLessons } from "@/lib/hooks/useLessons";
+import { completeLessonAction, createTeacherLessonAction } from "@/app/actions/lessons";
+import VideoGorüsme from "@/components/VideoGorüsme";
 import type { UserProfile } from "@/lib/types";
 
 const LessonsCalendar = dynamic(() => import("@/components/LessonsCalendar"), {
@@ -24,13 +25,15 @@ type Props = {
 export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
   const { data: profile } = useProfile();
   const { data: lessons = [], isLoading } = useLessons(profile?.id, profile?.role);
-  const updateLessonMutation = useUpdateLessonStatus();
   const queryClient = useQueryClient();
 
   const [secilenOgrenci, setSecilenOgrenci] = useState("");
   const [dersTarihi, setDersTarihi] = useState("");
   const [dersLoading, setDersLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [pendingLessonId, setPendingLessonId] = useState<string | null>(null);
+  const [videoLessonId, setVideoLessonId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const seciliGunDersleri = useMemo(() => {
     if (!selectedDate) return [];
@@ -46,17 +49,15 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
 
   const dersPlanla = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!secilenOgrenci || !dersTarihi || !profile?.id) {
+    if (!secilenOgrenci || !dersTarihi) {
       toast.error("Öğrenci ve tarih seçin.");
       return;
     }
     setDersLoading(true);
-    const { error } = await supabase
-      .from("lessons")
-      .insert([{ hoca_id: profile.id, ogrenci_id: secilenOgrenci, lesson_date: dersTarihi, status: "bekliyor" }]);
+    const result = await createTeacherLessonAction(secilenOgrenci, new Date(dersTarihi).toISOString());
     setDersLoading(false);
-    if (error) {
-      toast.error("Hata: " + error.message);
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
     toast.success("Ders planlandı.");
@@ -66,13 +67,23 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
     onAwardXp?.(20, "Yeni ders planlandı");
   };
 
-  const dersiTamamla = async (dersId: string) => {
-    try {
-      await updateLessonMutation.mutateAsync({ id: dersId, status: "tamamlandi" });
-      toast.success("Ders tamamlandı.");
-    } catch (err: unknown) {
-      toast.error("Hata: " + (err instanceof Error ? err.message : "Bilinmeyen hata"));
-    }
+  const dersiTamamla = (dersId: string) => {
+    setPendingLessonId(dersId);
+    startTransition(async () => {
+      try {
+        const result = await completeLessonAction(dersId);
+        if (!result.ok) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success("Ders tamamlandı, ödeme aktarıldı.");
+        queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      } catch {
+        toast.error("Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.");
+      } finally {
+        setPendingLessonId(null);
+      }
+    });
   };
 
   if (isLoading) return <LoadingSpinner />;
@@ -143,7 +154,12 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
                   Planlı ders yok.
                 </m.p>
               )}
-              {seciliGunDersleri.map((d) => (
+              {seciliGunDersleri.map((d) => {
+                const isVideo = videoLessonId === d.id;
+                const now     = Date.now();
+                const start   = new Date(d.lesson_date).getTime();
+                const canJoin = now >= start - 15 * 60 * 1000 && now <= start + 90 * 60 * 1000;
+                return (
                 <m.div
                   key={d.id}
                   layout
@@ -151,37 +167,83 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3"
+                  className="rounded-lg border border-slate-100 bg-slate-50 overflow-hidden"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-800">{d.users?.email}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {new Date(d.lesson_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-bold uppercase ${
-                        d.status === "bekliyor"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {d.status}
-                    </span>
-                    {d.status === "bekliyor" && (
-                      <button
-                        onClick={() => dersiTamamla(d.id)}
-                        disabled={updateLessonMutation.isPending}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
-                        title="Dersi Tamamla"
+                  <div className="flex items-center justify-between p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-800">{d.users?.full_name || d.users?.email}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {new Date(d.lesson_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`whitespace-nowrap rounded px-2 py-1 text-[10px] font-bold uppercase ${
+                          d.status === "bekliyor"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
                       >
-                        ✓
-                      </button>
-                    )}
+                        {d.status}
+                      </span>
+                      {d.status === "bekliyor" && d.meeting_room_id && (
+                        <button
+                          onClick={() => setVideoLessonId(isVideo ? null : d.id)}
+                          className={`rounded px-2 py-1 text-[10px] font-bold transition ${
+                            isVideo
+                              ? "bg-red-50 text-red-500 hover:bg-red-100"
+                              : canJoin
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-slate-100 text-slate-400"
+                          }`}
+                          title={canJoin ? "Görüşmeye Katıl" : "Ders saatine 15 dk kala aktif olur"}
+                        >
+                          {isVideo ? "Kapat" : "🎥 Derse Gir"}
+                        </button>
+                      )}
+                      {d.status === "bekliyor" && (
+                        <button
+                          onClick={() => dersiTamamla(d.id)}
+                          disabled={pendingLessonId === d.id}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+                          title="Dersi Tamamla"
+                        >
+                          {pendingLessonId === d.id ? (
+                            <span
+                              aria-hidden
+                              className="block h-3 w-3 rounded-full border-2 border-white/40 border-t-white animate-spin"
+                            />
+                          ) : (
+                            "✓"
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  <AnimatePresence>
+                    {isVideo && d.meeting_room_id && profile && (
+                      <m.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden border-t border-slate-100"
+                      >
+                        <div className="p-2">
+                          <VideoGorüsme
+                            lessonId={d.id}
+                            meetingRoomId={d.meeting_room_id}
+                            lessonDate={d.lesson_date}
+                            userName={profile.full_name ?? profile.email}
+                            isHost={true}
+                            onClose={() => setVideoLessonId(null)}
+                          />
+                        </div>
+                      </m.div>
+                    )}
+                  </AnimatePresence>
                 </m.div>
-              ))}
+              );})}
             </AnimatePresence>
           </div>
         </div>

@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/lib/supabase/client";
 import toast from "react-hot-toast";
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from "@/lib/validations/auth";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
+import { sendPasswordResetEmail } from "@/app/actions/auth";
 
 export default function SifremiUnuttumPage() {
   const {
@@ -19,11 +18,9 @@ export default function SifremiUnuttumPage() {
   });
 
   const onSubmit = async (values: ForgotPasswordFormValues) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/sifre-yenile`,
-    });
-    if (error) {
-      toast.error(getErrorMessage(error));
+    const result = await sendPasswordResetEmail(values.email);
+    if (!result.ok) {
+      toast.error(result.error);
       return;
     }
     toast.success("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.");

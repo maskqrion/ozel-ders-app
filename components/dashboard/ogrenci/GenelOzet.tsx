@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase/client";
+import Link from "next/link";
+import { acceptInvitation } from "@/app/actions/invitations";
 import type { Assignment, Lesson } from "@/lib/types";
 import { XP_PER_LEVEL } from "@/lib/constants";
 import { useProfile } from "@/lib/hooks/useProfile";
@@ -193,7 +194,6 @@ export default function GenelOzet({
   dersler = [],
 }: Props) {
   const { data: profile } = useProfile();
-  const userId = profile?.id ?? "";
   const level = profile?.level ?? 1;
   const xp = profile?.xp ?? 0;
   const firstName = profile?.full_name?.split(" ")[0] ?? "Öğrenci";
@@ -208,40 +208,18 @@ export default function GenelOzet({
       toast.error("Geçersiz veya kullanılmış davet bağlantısı.");
       return;
     }
-
     setConnecting(true);
     try {
-      const { data: invitation, error: invErr } = await supabase
-        .from("invitations")
-        .select("id, hoca_id, token, is_used")
-        .eq("token", token)
-        .eq("is_used", false)
-        .maybeSingle();
-
-      if (invErr || !invitation) {
-        toast.error("Geçersiz veya kullanılmış davet bağlantısı.");
+      const result = await acceptInvitation(token);
+      if (!result.ok) {
+        toast.error(result.error);
         return;
       }
-
-      const { error: linkErr } = await supabase
-        .from("teacher_students")
-        .insert([{ hoca_id: invitation.hoca_id, ogrenci_id: userId }]);
-      if (linkErr && linkErr.code !== "23505") throw linkErr;
-
-      const { error: useErr } = await supabase
-        .from("invitations")
-        .update({ is_used: true })
-        .eq("id", invitation.id)
-        .eq("is_used", false);
-      if (useErr) throw useErr;
-
       toast.success("Hocanıza başarıyla bağlandınız!");
       setInviteLink("");
       await Promise.all([refetchDersler(), refetchOdevler()]);
-    } catch (err: unknown) {
-      toast.error(
-        "Hata: " + ((err as { message?: string }).message ?? "Davet kabul edilemedi."),
-      );
+    } catch {
+      toast.error("Davet kabul edilemedi.");
     } finally {
       setConnecting(false);
     }
@@ -517,13 +495,13 @@ export default function GenelOzet({
 
                   {/* Teacher avatar */}
                   <div className="h-10 w-10 rounded-xl bg-emerald-100 text-emerald-700 grid place-items-center shrink-0 text-sm font-extrabold">
-                    {(ders.users?.email?.[0] ?? "H").toUpperCase()}
+                    {(ders.hoca?.full_name?.[0] ?? ders.hoca?.email?.[0] ?? "H").toUpperCase()}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold text-slate-900 truncate">
-                      {ders.users?.email ?? "Hoca"}
+                      {ders.hoca?.full_name || ders.hoca?.email || "Hoca"}
                     </div>
                     <div className="mt-0.5 text-xs text-slate-500 flex items-center gap-2">
                       <CalendarDays size={11} strokeWidth={2.2} className="text-slate-400 shrink-0" />
@@ -538,10 +516,10 @@ export default function GenelOzet({
                     Onaylı
                   </span>
 
-                  <button className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:text-sky-700 transition shrink-0">
+                  <Link href="/ogrenci?tab=takvim" className="inline-flex items-center gap-1 text-xs font-bold text-sky-600 hover:text-sky-700 transition shrink-0">
                     Detay
                     <ArrowRight size={12} strokeWidth={2.5} />
-                  </button>
+                  </Link>
                 </m.div>
               ))
             )}

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
+import { createReservation } from "@/app/actions/reservations";
 
 /* ============================================================
    INLINE ICONS
@@ -64,10 +66,11 @@ const DAY_TR   = ["Pzr", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"] as const;
 const MONTH_TR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"] as const;
 const MONTH_LONG = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] as const;
 
+// MusaitlikAyarlari 06:00–22:00 aralığını destekler; burası da bununla uyumlu.
 const TIMES = [
-  "08:00", "09:00", "10:00", "11:00",
+  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
   "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
-  "18:00", "19:00", "20:00", "21:00",
+  "18:00", "19:00", "20:00", "21:00", "22:00",
 ] as const;
 type TimeSlot = (typeof TIMES)[number];
 
@@ -248,19 +251,36 @@ function DayStrip({
 
 /* ============================================================
    TIME PILL  (dark glass + hover glow)
+   Durumlar:
+     booked      → dolu (başkası rezerve etmiş veya geçmiş)
+     unavailable → hoca bu saatte müsait değil
+     default     → rezerve edilebilir
    ============================================================ */
 function TimePill({
   time,
   booked,
+  unavailable,
   onClick,
 }: {
   time: string;
   booked: boolean;
+  unavailable: boolean;
   onClick?: () => void;
 }) {
   if (booked) {
     return (
       <div className="h-10 min-w-[76px] px-4 rounded-xl border border-white/[0.05] bg-white/[0.02] text-white/20 text-sm font-semibold inline-flex items-center justify-center opacity-40 select-none cursor-not-allowed">
+        {time}
+      </div>
+    );
+  }
+
+  if (unavailable) {
+    return (
+      <div
+        title="Hoca bu saatte müsait değil"
+        className="h-10 min-w-[76px] px-4 rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.04] text-amber-300/30 text-sm font-semibold inline-flex items-center justify-center opacity-60 select-none cursor-not-allowed line-through decoration-amber-500/20"
+      >
         {time}
       </div>
     );
@@ -291,16 +311,16 @@ function TimeGroup({
   icon: Icon,
   slots,
   bookedKeys,
+  unavailableKeys,
   onPick,
 }: {
   label: string;
   icon: (p: IP) => React.ReactElement;
   slots: TimeSlot[];
   bookedKeys: Set<string>;
+  unavailableKeys: Set<string>;
   onPick: (time: TimeSlot) => void;
 }) {
-  const day = new Date(); // placeholder — key resolution done outside
-  void day;
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -313,14 +333,19 @@ function TimeGroup({
         <span className="text-[10px] text-white/20">· {slots.length} saat</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {slots.map((t) => (
-          <TimePill
-            key={t}
-            time={t}
-            booked={bookedKeys.has(t)}
-            onClick={() => !bookedKeys.has(t) && onPick(t)}
-          />
-        ))}
+        {slots.map((t) => {
+          const isBooked = bookedKeys.has(t);
+          const isUnavail = !isBooked && unavailableKeys.has(t);
+          return (
+            <TimePill
+              key={t}
+              time={t}
+              booked={isBooked}
+              unavailable={isUnavail}
+              onClick={() => !isBooked && !isUnavail && onPick(t)}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -346,9 +371,10 @@ function ConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const priceNotSet = hoca.ders_fiyati === null;
   const price = hoca.ders_fiyati ?? 0;
   const hasBalance = walletBalance !== null && walletBalance >= price;
-  const lowBalance = !walletLoading && walletBalance !== null && !hasBalance && price > 0;
+  const lowBalance = !priceNotSet && !walletLoading && walletBalance !== null && !hasBalance && price > 0;
 
   return (
     <>
@@ -469,6 +495,30 @@ function ConfirmModal({
             </div>
           </div>
 
+          {/* Price not set warning */}
+          <AnimatePresence>
+            {priceNotSet && (
+              <m.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] p-3.5 flex items-start gap-2.5">
+                  <IAlertTri size={14} sw={2} className="text-amber-400 shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-amber-300">
+                      Fiyat belirlenmemiş
+                    </p>
+                    <p className="text-[11px] text-amber-400/70 mt-0.5">
+                      Hocanın ders fiyatı henüz belirlenmemiş. Rezervasyon yapılamaz.
+                    </p>
+                  </div>
+                </div>
+              </m.div>
+            )}
+          </AnimatePresence>
+
           {/* Insufficient balance warning */}
           <AnimatePresence>
             {lowBalance && (
@@ -499,7 +549,15 @@ function ConfirmModal({
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2">
-            {lowBalance ? (
+            {priceNotSet ? (
+              <button
+                disabled
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] text-amber-400/50 text-sm font-bold cursor-not-allowed"
+              >
+                <IAlertTri size={15} sw={2} />
+                Fiyat Belirlenmemiş
+              </button>
+            ) : lowBalance ? (
               <a
                 href="/ogrenci/cuzdan"
                 className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border border-rose-400/30 bg-rose-500/10 text-rose-300 text-sm font-bold transition-all hover:bg-rose-500/20 hover:border-rose-400/50"
@@ -572,6 +630,10 @@ export default function RezervasyonMatrisi({
   const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
   const [slotsLoading, setSlotsLoading] = useState(false);
 
+  const [now, setNow] = useState<Date>(() => new Date());
+  const [teacherAvailability, setTeacherAvailability] = useState<
+    Array<{ day_of_week: number; start_hour: number; end_hour: number }> | null
+  >(null);
   const [pendingSlot, setPendingSlot] = useState<SelectedSlot | null>(null);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
@@ -601,7 +663,8 @@ export default function RezervasyonMatrisi({
         .select("lesson_date")
         .eq("hoca_id", hoca.id)
         .gte("lesson_date", from)
-        .lte("lesson_date", to.toISOString());
+        .lte("lesson_date", to.toISOString())
+        .neq("status", "iptal");
 
       const keys = new Set<string>();
       for (const row of (data ?? []) as { lesson_date: string }[]) {
@@ -615,6 +678,16 @@ export default function RezervasyonMatrisi({
       setSlotsLoading(false);
     }
   }, [hoca, days]);
+
+  /* ── Fetch teacher availability ── */
+  const fetchAvailability = useCallback(async () => {
+    if (!hoca) return;
+    const { data } = await supabase
+      .from("teacher_availability")
+      .select("day_of_week, start_hour, end_hour")
+      .eq("hoca_id", hoca.id);
+    setTeacherAvailability(data ?? []);
+  }, [hoca]);
 
   /* ── Fetch wallet balance ── */
   const fetchWallet = useCallback(async () => {
@@ -633,12 +706,14 @@ export default function RezervasyonMatrisi({
 
   useEffect(() => {
     if (open) {
+      setNow(new Date());
       setSelectedDayIdx(0);
       setPendingSlot(null);
       fetchBookedSlots();
       fetchWallet();
+      fetchAvailability();
     }
-  }, [open, fetchBookedSlots, fetchWallet]);
+  }, [open, fetchBookedSlots, fetchWallet, fetchAvailability]);
 
   useEffect(() => {
     setSelectedDayIdx(0);
@@ -662,10 +737,41 @@ export default function RezervasyonMatrisi({
     return () => window.removeEventListener("keydown", h);
   }, [open, pendingSlot, onClose]);
 
+  /* ── Precompute available hours per day-of-week from teacher's schedule ── */
+  const availHoursByDow = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    if (!teacherAvailability || teacherAvailability.length === 0) return map;
+    for (const row of teacherAvailability) {
+      const set = new Set<number>();
+      for (let h = row.start_hour; h < row.end_hour; h++) set.add(h);
+      map.set(row.day_of_week, set);
+    }
+    return map;
+  }, [teacherAvailability]);
+
+  const hasAvailConfig = availHoursByDow.size > 0;
+
   /* ── Day available counts ── */
   const dayAvailableCounts = useMemo(
-    () => days.map((d) => TIMES.filter((t) => !bookedSlots.has(slotKey(d, t))).length),
-    [days, bookedSlots],
+    () => days.map((d) => {
+      const dateStr  = d.toISOString().slice(0, 10);
+      const todayStr = now.toISOString().slice(0, 10);
+      const dayOfWeek = d.getDay();
+      const allowedHours = availHoursByDow.get(dayOfWeek);
+
+      return TIMES.filter((t) => {
+        if (bookedSlots.has(slotKey(d, t))) return false;
+        const h = parseInt(t, 10);
+        if (dateStr === todayStr) {
+          const slotDt = new Date(d);
+          slotDt.setHours(h, 0, 0, 0);
+          if (slotDt < now) return false;
+        }
+        if (hasAvailConfig && !allowedHours?.has(h)) return false;
+        return true;
+      }).length;
+    }),
+    [days, bookedSlots, now, availHoursByDow, hasAvailConfig],
   );
 
   /* ── Slot pick → open confirmation ── */
@@ -679,12 +785,31 @@ export default function RezervasyonMatrisi({
   const activeDay = days[selectedDayIdx];
   const activeDayBookedKeys = useMemo(() => {
     const dateStr = activeDay.toISOString().slice(0, 10);
+    const todayStr = now.toISOString().slice(0, 10);
     const keys = new Set<string>();
     for (const t of TIMES) {
-      if (bookedSlots.has(`${dateStr}_${t}`)) keys.add(t);
+      if (bookedSlots.has(`${dateStr}_${t}`)) {
+        keys.add(t);
+      } else if (dateStr === todayStr) {
+        const slotDt = new Date(activeDay);
+        slotDt.setHours(parseInt(t, 10), 0, 0, 0);
+        if (slotDt < now) keys.add(t);
+      }
     }
     return keys;
-  }, [activeDay, bookedSlots]);
+  }, [activeDay, bookedSlots, now]);
+
+  /* ── Unavailable keys for active day (teacher schedule) ── */
+  const activeUnavailableKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (!hasAvailConfig) return keys;
+    const dayOfWeek = activeDay.getDay();
+    const allowedHours = availHoursByDow.get(dayOfWeek);
+    for (const t of TIMES) {
+      if (!allowedHours?.has(parseInt(t, 10))) keys.add(t);
+    }
+    return keys;
+  }, [activeDay, availHoursByDow, hasAvailConfig]);
 
   /* ── Time groups ── */
   const timeGroups = useMemo(() => ({
@@ -696,32 +821,37 @@ export default function RezervasyonMatrisi({
   /* ── Confirm booking ── */
   const confirmBooking = async () => {
     if (!pendingSlot || !hoca) return;
+
+    if (hoca.ders_fiyati === null) {
+      toast.error("Hocanın ders fiyatı belirlenmemiş.");
+      return;
+    }
+
+    const [hh] = pendingSlot.time.split(":").map(Number);
+    const dt = new Date(pendingSlot.date);
+    dt.setHours(hh, 0, 0, 0);
+
+    if (dt < new Date()) {
+      toast.error("Bu saat geçmişte kaldı. Lütfen başka bir zaman seçin.");
+      setPendingSlot(null);
+      return;
+    }
+
     setBooking(true);
     try {
-      const price = hoca.ders_fiyati ?? 0;
-
-      if (price > 0) {
-        const { error: rpcErr } = await supabase.rpc("transfer_lesson_payment", {
-          p_ogrenci_id: currentUserId,
-          p_hoca_id: hoca.id,
-          p_tutar: price,
-        });
-        if (rpcErr) throw rpcErr;
-      }
-
-      const [hh, mm] = pendingSlot.time.split(":").map(Number);
-      const dt = new Date(pendingSlot.date);
-      dt.setHours(hh, mm, 0, 0);
-      const { error: lessonErr } = await supabase.from("lessons").insert({
-        hoca_id: hoca.id,
-        ogrenci_id: currentUserId,
-        lesson_date: dt.toISOString(),
-        status: "bekliyor",
+      const result = await createReservation({
+        teacherId: hoca.id,
+        lessonDate: dt.toISOString(),
       });
-      if (lessonErr) throw lessonErr;
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
 
       toast.success("Ders rezervasyonu oluşturuldu!", { duration: 4000 });
       setPendingSlot(null);
+      fetchBookedSlots();
       onClose();
     } catch (err: unknown) {
       toast.error(
@@ -796,7 +926,7 @@ export default function RezervasyonMatrisi({
                   }
                 >
                   {hoca.avatar_url ? (
-                    <img src={hoca.avatar_url} alt="" className="h-full w-full object-cover" />
+                    <Image src={hoca.avatar_url} alt="" width={44} height={44} className="h-full w-full object-cover" />
                   ) : (
                     initials(hoca.full_name)
                   )}
@@ -925,6 +1055,7 @@ export default function RezervasyonMatrisi({
                           icon={g.icon}
                           slots={timeGroups[g.id]}
                           bookedKeys={activeDayBookedKeys}
+                          unavailableKeys={activeUnavailableKeys}
                           onPick={onSlotPick}
                         />
                       ))}
@@ -942,6 +1073,12 @@ export default function RezervasyonMatrisi({
                         <span className="h-2.5 w-5 rounded-full border border-emerald-500/30 bg-emerald-500/[0.1]" />
                         Müsait
                       </span>
+                      {hasAvailConfig && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2.5 w-5 rounded-full border border-amber-500/20 bg-amber-500/[0.06]" />
+                          Kapalı
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5">
                         <span className="h-2.5 w-5 rounded-full bg-white/[0.06]" />
                         Dolu

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, m } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -95,6 +96,7 @@ export default function ProfilSayfasi() {
           ilce: p.ilce || "",
           hakkinda: p.hakkinda || "",
           ders_fiyati: p.ders_fiyati != null ? String(p.ders_fiyati) : "",
+          identity_number: p.identity_number || "",
           video_url: p.video_url || "",
           portfolio_url: p.portfolio_url || "",
         });
@@ -130,9 +132,13 @@ export default function ProfilSayfasi() {
       ilce?: string | null;
       hakkinda?: string | null;
       ders_fiyati?: number | null;
+      identity_number?: string | null;
       video_url?: string | null;
       portfolio_url?: string | null;
-    } = { full_name: values.full_name?.trim() || null };
+    } = {
+      full_name: values.full_name?.trim() || null,
+      identity_number: values.identity_number?.trim() || null,
+    };
 
     if (profile.role === "hoca") {
       const trimmed = (values.ders_fiyati || "").trim();
@@ -191,7 +197,7 @@ export default function ProfilSayfasi() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
-      <nav className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
+      <nav className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
         <div className="flex items-center gap-4">
           <Link href={isHoca ? "/hoca" : "/ogrenci"} className={`font-medium ${theme.back}`}>
             ← Panele Dön
@@ -214,7 +220,7 @@ export default function ProfilSayfasi() {
               <div className="group relative">
                 <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-slate-100 shadow-md">
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                    <Image src={profile.avatar_url} alt="Avatar" width={96} height={96} className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-4xl">👤</span>
                   )}
@@ -266,6 +272,26 @@ export default function ProfilSayfasi() {
                   />
                   {errors.full_name && <p className="mt-1 text-sm text-red-500">{errors.full_name.message}</p>}
                 </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  TC Kimlik Numarası
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={11}
+                  placeholder="11 haneli TC kimlik numaranız"
+                  {...register("identity_number")}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-800 transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15"
+                />
+                {errors.identity_number && (
+                  <p className="mt-1 text-sm text-red-500">{errors.identity_number.message}</p>
+                )}
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Ödeme işlemleri için zorunludur. Güvenli şekilde saklanır, üçüncü taraflarla paylaşılmaz.
+                </p>
               </div>
 
               <AnimatePresence initial={false}>

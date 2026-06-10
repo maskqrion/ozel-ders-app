@@ -28,6 +28,10 @@ export const profileUpdateSchema = z.object({
   ilce: z.string().optional(),
   hakkinda: z.string().optional(),
   ders_fiyati: z.string().optional(),
+  identity_number: z
+    .string()
+    .refine((v) => !v || /^\d{11}$/.test(v), { message: "TC kimlik numarası 11 haneli rakamdan oluşmalıdır." })
+    .optional(),
   video_url: z
     .string()
     .refine((v) => !v || /^https?:\/\//.test(v), { message: "Geçerli bir http/https URL giriniz" })
