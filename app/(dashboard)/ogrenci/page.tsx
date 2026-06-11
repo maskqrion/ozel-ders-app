@@ -285,6 +285,12 @@ export default function OgrenciPaneli() {
         <h1 className="text-xl font-bold text-emerald-600">Öğrenci Paneli</h1>
         <div className="flex items-center gap-4">
           {user && <NotificationBell userId={user.id} />}
+          <Link
+            href="/destek"
+            className="hidden text-sm font-medium text-slate-600 transition hover:text-emerald-600 sm:inline"
+          >
+            Destek
+          </Link>
           <Link href="/profil" className="group flex items-center gap-2">
             <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition group-hover:border-emerald-400">
               {profile?.avatar_url ? (

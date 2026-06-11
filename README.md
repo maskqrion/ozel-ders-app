@@ -40,14 +40,16 @@ E2E testleri `tests/e2e/` altındadır ve Playwright ile çalışır. İki katma
 - Giriş sayfası yükleniyor (`/login`)
 - Korumalı dashboard, oturumu olmayan kullanıcıyı `/login`'e yönlendiriyor
 - Herkese açık eğitmen profili (`/hoca/[id]`) login'e yönlendirmeden yanıt veriyor
+- Yardım Merkezi (`/yardim`) herkese açık; SSS araması ve boş durum çalışıyor
+- Destek sayfası (`/destek`) oturumsuz kullanıcıyı `/login`'e yönlendiriyor
 
 **2. Kimlik doğrulamalı** — `tests/e2e/authenticated.spec.ts`, yalnızca
 `E2E_STUDENT_EMAIL` / `E2E_STUDENT_PASSWORD` ve/veya `E2E_TEACHER_EMAIL` /
 `E2E_TEACHER_PASSWORD` ortam değişkenleri tanımlıysa çalışır; yoksa **otomatik
 atlanır** ve `npm run test` yine geçer. Kapsam: öğrenci/hoca girişi, dashboard,
 öğretmen arama, rezervasyon modali (onaysız), cüzdan (ödemesiz), mesajlar
-(göndermeden). Testler salt okunurdur — gerçek rezervasyon, ödeme, mesaj veya
-AI çağrısı **yapmaz**.
+(göndermeden), destek sayfası (talep göndermeden). Testler salt okunurdur —
+gerçek rezervasyon, ödeme, mesaj, destek talebi veya AI çağrısı **yapmaz**.
 
 İlk kurulumda tarayıcıyı indirin: `npx playwright install chromium`
 

@@ -273,6 +273,12 @@ export default function HocaPaneli() {
         <h1 className="text-xl font-bold text-blue-600">Hoca Paneli</h1>
         <div className="flex items-center gap-4">
           {user && <NotificationBell userId={user.id} />}
+          <Link
+            href="/destek"
+            className="hidden text-sm font-medium text-slate-600 transition hover:text-blue-600 sm:inline"
+          >
+            Destek
+          </Link>
           <Link href="/profil" className="group flex items-center gap-2">
             <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition group-hover:border-blue-400">
               {profile?.avatar_url ? (

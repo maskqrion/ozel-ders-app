@@ -14,8 +14,8 @@ import {
  *
  * Güvenlik garantileri:
  *  - Testler SALT OKUNUR davranır: rezervasyon onaylanmaz, ödeme/bakiye
- *    yükleme yapılmaz, mesaj gönderilmez, ödev/quiz oluşturulmaz, dosya
- *    yüklenmez, AI çağrılmaz.
+ *    yükleme yapılmaz, mesaj gönderilmez, ödev/quiz oluşturulmaz, destek
+ *    talebi gönderilmez, dosya yüklenmez, AI çağrılmaz.
  *  - Login isteğinin gövdesinde şifre bulunduğu için bu dosyada trace kapalı
  *    (CI retry'larında bile artefakta kimlik bilgisi sızmaz).
  *  - Her rol için yalnızca 1 giriş yapılır (auth rate limit: 5 deneme/dk/IP).
@@ -124,6 +124,20 @@ test.describe('Öğrenci — kimlik doğrulamalı akışlar', () => {
     await expect(page.getByRole('heading', { name: 'Sohbetler' })).toBeVisible({
       timeout: 30_000,
     })
+  })
+
+  test('destek sayfası yükleniyor — talep GÖNDERİLMİYOR', async () => {
+    await page.goto('/destek')
+    await expect(
+      page.getByRole('heading', { name: 'Yeni Destek Talebi' }),
+    ).toBeVisible({ timeout: 30_000 })
+    // Form alanları render edilmiş; gönderim yapılmaz (gerçek talep oluşmaz)
+    await expect(page.locator('#subject')).toBeVisible()
+    await expect(page.locator('#message')).toBeVisible()
+    // Talep listesi bölümü (boş durum veya liste) görünür
+    await expect(
+      page.getByRole('heading', { name: 'Taleplerim' }),
+    ).toBeVisible({ timeout: 15_000 })
   })
 
   test('herkese açık eğitmen profili oturumla da erişilebilir', async () => {

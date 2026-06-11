@@ -2,7 +2,7 @@
 // Docs: node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md
 //
 // Kural özeti:
-//   Korumalı (/hoca, /ogrenci/*, /profil/*, /liderlik) → oturum yoksa /login?redirect=…
+//   Korumalı (/hoca, /ogrenci/*, /profil/*, /liderlik, /destek) → oturum yoksa /login?redirect=…
 //   Auth sayfaları (/login, /sifremi-unuttum)           → oturum varsa role'a göre dashboard
 //   /hoca/[id] (eğitmen profili)                        → herkese açık, DOKUNMA
 //   Diğer her şey                                       → serbest
@@ -22,6 +22,8 @@ function isProtectedPath(pathname: string): boolean {
   if (pathname === '/profil' || pathname.startsWith('/profil/')) return true
   // Liderlik tablosu
   if (pathname === '/liderlik') return true
+  // Destek talepleri (oturum gerektirir; /yardim herkese açık)
+  if (pathname === '/destek' || pathname.startsWith('/destek/')) return true
   return false
 }
 

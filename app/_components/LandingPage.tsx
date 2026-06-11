@@ -621,10 +621,10 @@ function Footer() {
       { label: 'İletişim', href: 'mailto:destek@ozelderspro.com' },
     ]},
     { title: 'Yardım', items: [
-      { label: 'Destek', href: 'mailto:destek@ozelderspro.com' },
+      { label: 'Yardım Merkezi', href: '/yardim' },
+      { label: 'Destek Talebi', href: '/destek' },
       { label: 'Güvenlik · KVKK', href: '/kvkk' },
-      { label: 'Sıkça Sorulanlar', href: '#' },
-      { label: 'Topluluk', href: '#' },
+      { label: 'Sıkça Sorulanlar', href: '/yardim' },
     ]},
   ];
 

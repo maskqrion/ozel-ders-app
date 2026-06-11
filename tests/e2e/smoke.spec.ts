@@ -9,6 +9,8 @@ import { test, expect } from '@playwright/test'
  *  2. Giriş sayfası yükleniyor
  *  3. Korumalı dashboard oturumsuz kullanıcıyı /login'e yönlendiriyor
  *  4. Herkese açık eğitmen profili login'e yönlendirilmiyor (404/200 kabul)
+ *  5. Yardım Merkezi (/yardim) herkese açık; SSS araması ve boş durum çalışıyor
+ *  6. Destek (/destek) oturumsuz kullanıcıyı /login'e yönlendiriyor
  */
 
 test('açılış sayfası yükleniyor', async ({ page }) => {
@@ -52,4 +54,41 @@ test('eğitmen profili herkese açık — login\'e yönlendirilmiyor', async ({
 
   expect(response!.status(), 'sunucu hatası (5xx) olmamalı').toBeLessThan(500)
   await expect(page).not.toHaveURL(/\/login/)
+})
+
+test('yardım merkezi herkese açık yükleniyor', async ({ page }) => {
+  const response = await page.goto('/yardim')
+
+  expect(response!.status()).toBeLessThan(400)
+  await expect(page).not.toHaveURL(/\/login/)
+  await expect(page.getByRole('heading', { name: 'Yardım Merkezi' })).toBeVisible()
+  // SSS bölümleri ve arama kutusu render edilmiş olmalı
+  await expect(page.getByLabel('Sıkça sorulan sorularda ara')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rezervasyonlar' })).toBeVisible()
+})
+
+test('yardım merkezi araması — eşleşme yoksa boş durum gösteriliyor', async ({
+  page,
+}) => {
+  await page.goto('/yardim')
+
+  const arama = page.getByLabel('Sıkça sorulan sorularda ara')
+  await arama.fill('xqzzy-eslesmeyen-arama-terimi')
+  await expect(
+    page.getByText('Aramanızla eşleşen soru bulunamadı'),
+  ).toBeVisible()
+
+  // Temizleyince sonuçlar geri gelmeli (yalnızca istemci tarafı filtre)
+  await page.getByRole('button', { name: 'Aramayı temizle' }).click()
+  await expect(page.getByRole('heading', { name: 'Rezervasyonlar' })).toBeVisible()
+})
+
+test('destek sayfası oturumsuz kullanıcıyı /login\'e yönlendiriyor', async ({
+  page,
+}) => {
+  await page.goto('/destek')
+
+  await expect(page).toHaveURL(/\/login/)
+  const url = new URL(page.url())
+  expect(url.searchParams.get('redirect')).toBe('/destek')
 })

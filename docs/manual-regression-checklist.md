@@ -151,6 +151,33 @@ konsolda hata var mı, temel etkileşim çalışıyor mu?
       açık yönlendirme oluşmuyor
 - [ ] Ağ kesintisinde (devtools offline) sayfalar çakılmıyor, anlamlı hata veriyor
 
+## 17. Yardım Merkezi (`/yardim`) ve Destek (`/destek`)
+
+- [ ] `/yardim` oturum GEREKTİRMEDEN açılıyor; login'e yönlendirme yok
+- [ ] SSS kategorileri görünüyor: Öğrenciler, Hocalar, Rezervasyonlar,
+      Ödemeler ve Cüzdan, Ödevler, Quizler, Hesap ve Güvenlik
+- [ ] Arama kutusu soru VE cevap metninde filtreliyor (ör. "bakiye" → ödeme soruları)
+- [ ] Kategori filtre çipleri çalışıyor; "Tümü" sıfırlıyor
+- [ ] Eşleşme olmayan aramada boş durum + "Aramayı temizle" çalışıyor
+- [ ] Soru kartları (accordion) açılıp kapanıyor
+- [ ] "Destek Talebi Oluştur" CTA'sı `/destek`'e gidiyor
+- [ ] `/destek` oturumsuz kullanıcıyı `/login?redirect=/destek`'e yönlendiriyor
+- [ ] (Test ortamı) Talep oluşturma: kategori/öncelik/konu/mesaj ile gönderim
+      başarılı; toast görünüyor; talep listede en üstte beliriyor
+- [ ] Form doğrulama: kategori seçilmeden, konu < 5 veya mesaj < 20 karakterken
+      Türkçe hata mesajları görünüyor; gönderim sırasında buton pasif
+- [ ] Talep kartında durum rozeti (Açık), kategori, öncelik ve tarih doğru
+- [ ] Hiç talep yokken boş durum mesajı görünüyor
+- [ ] **RLS:** Kullanıcı yalnızca KENDİ taleplerini görüyor — ikinci bir test
+      hesabıyla girince ilk hesabın talepleri görünmüyor; REST araması ile
+      başka kullanıcının bilet id'si sorgulanınca veri dönmüyor
+- [ ] Kullanıcı talep durumunu DEĞİŞTİREMİYOR (update/delete reddedilir)
+- [ ] Hızlı art arda 6+ talep gönderiminde rate limit mesajı görünüyor (5/saat)
+- [ ] Mobil (375px): yardım araması, çipler, destek formu ve talep kartları
+      taşma olmadan kullanılabilir
+- [ ] Landing footer'daki "Yardım Merkezi" / "Destek Talebi" linkleri çalışıyor;
+      panel üst menüsündeki "Destek" linki `/destek`'e gidiyor
+
 ---
 
 **Kayıt:** Her koşudan sonra tarih, ortam (local/staging), tarayıcı ve bulunan
