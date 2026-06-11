@@ -650,74 +650,106 @@ export default function RezervasyonMatrisi({
     });
   }, [today, weekOffset]);
 
-  /* ── Fetch booked slots ── */
-  const fetchBookedSlots = useCallback(async () => {
-    if (!hoca) return;
-    setSlotsLoading(true);
-    try {
-      const from = days[0].toISOString();
-      const to = new Date(days[days.length - 1]);
-      to.setHours(23, 59, 59, 999);
-      const { data } = await supabase
-        .from("lessons")
-        .select("lesson_date")
-        .eq("hoca_id", hoca.id)
-        .gte("lesson_date", from)
-        .lte("lesson_date", to.toISOString())
-        .neq("status", "iptal");
+  /* ── Saf sorgular: setState içermez, effect'in senkron yolunda güvenle durur ── */
+  const loadBookedSlots = useCallback(async (): Promise<Set<string>> => {
+    const keys = new Set<string>();
+    if (!hoca) return keys;
+    const from = days[0].toISOString();
+    const to = new Date(days[days.length - 1]);
+    to.setHours(23, 59, 59, 999);
+    const { data } = await supabase
+      .from("lessons")
+      .select("lesson_date")
+      .eq("hoca_id", hoca.id)
+      .gte("lesson_date", from)
+      .lte("lesson_date", to.toISOString())
+      .neq("status", "iptal");
 
-      const keys = new Set<string>();
-      for (const row of (data ?? []) as { lesson_date: string }[]) {
-        const dt = new Date(row.lesson_date);
-        const dateKey = dt.toISOString().slice(0, 10);
-        const timeKey = `${String(dt.getHours()).padStart(2, "0")}:00`;
-        keys.add(`${dateKey}_${timeKey}`);
-      }
-      setBookedSlots(keys);
-    } finally {
-      setSlotsLoading(false);
+    for (const row of (data ?? []) as { lesson_date: string }[]) {
+      const dt = new Date(row.lesson_date);
+      const dateKey = dt.toISOString().slice(0, 10);
+      const timeKey = `${String(dt.getHours()).padStart(2, "0")}:00`;
+      keys.add(`${dateKey}_${timeKey}`);
     }
+    return keys;
   }, [hoca, days]);
 
-  /* ── Fetch teacher availability ── */
-  const fetchAvailability = useCallback(async () => {
-    if (!hoca) return;
+  const loadAvailability = useCallback(async () => {
+    if (!hoca) return [];
     const { data } = await supabase
       .from("teacher_availability")
       .select("day_of_week, start_hour, end_hour")
       .eq("hoca_id", hoca.id);
-    setTeacherAvailability(data ?? []);
+    return data ?? [];
   }, [hoca]);
 
-  /* ── Fetch wallet balance ── */
-  const fetchWallet = useCallback(async () => {
-    setWalletLoading(true);
-    try {
-      const { data } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("id", currentUserId)
-        .single();
-      setWalletBalance(data?.balance ?? null);
-    } finally {
-      setWalletLoading(false);
-    }
+  const loadWallet = useCallback(async (): Promise<number | null> => {
+    const { data } = await supabase
+      .from("wallets")
+      .select("balance")
+      .eq("id", currentUserId)
+      .single();
+    return data?.balance ?? null;
   }, [currentUserId]);
 
-  useEffect(() => {
-    if (open) {
+  /* ── Handler'lar için: slot listesini skeleton göstererek yenile ── */
+  const refreshBookedSlots = useCallback(async () => {
+    if (!hoca) return;
+    setSlotsLoading(true);
+    try {
+      setBookedSlots(await loadBookedSlots());
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [hoca, loadBookedSlots]);
+
+  /* ── Senkron resetler render sırasında (effect'te senkron setState
+        cascading render yaratıyordu). Eski davranış: open/hoca/weekOffset
+        değişiminde (modal açıkken) saat/seçim resetlenir ve yeniden yüklenir;
+        weekOffset değişiminde gün seçimi koşulsuz sıfırlanır. ── */
+  const [prevReset, setPrevReset] = useState({ open, weekOffset, hoca });
+  if (prevReset.open !== open || prevReset.weekOffset !== weekOffset || prevReset.hoca !== hoca) {
+    const weekChanged = prevReset.weekOffset !== weekOffset;
+    const opening = open && !prevReset.open;
+    const reloadWhileOpen = open && prevReset.open && (weekChanged || prevReset.hoca !== hoca);
+    setPrevReset({ open, weekOffset, hoca });
+    if (weekChanged) setSelectedDayIdx(0);
+    if (opening || reloadWhileOpen) {
       setNow(new Date());
       setSelectedDayIdx(0);
       setPendingSlot(null);
-      fetchBookedSlots();
-      fetchWallet();
-      fetchAvailability();
+      if (hoca) setSlotsLoading(true);
+      setWalletLoading(true);
     }
-  }, [open, fetchBookedSlots, fetchWallet, fetchAvailability]);
+  }
 
+  /* ── Asenkron yüklemeler: eski fetch'lerle birebir aynı hata izolasyonu
+        (her biri bağımsız, biri patlarsa diğerleri etkilenmez) ── */
   useEffect(() => {
-    setSelectedDayIdx(0);
-  }, [weekOffset]);
+    if (!open) return;
+    if (hoca) {
+      (async () => {
+        try {
+          const keys = await loadBookedSlots();
+          setBookedSlots(keys);
+        } finally {
+          setSlotsLoading(false);
+        }
+      })();
+      (async () => {
+        const avail = await loadAvailability();
+        setTeacherAvailability(avail);
+      })();
+    }
+    (async () => {
+      try {
+        const balance = await loadWallet();
+        setWalletBalance(balance);
+      } finally {
+        setWalletLoading(false);
+      }
+    })();
+  }, [open, hoca, loadBookedSlots, loadWallet, loadAvailability]);
 
   /* ── Body scroll lock ── */
   useEffect(() => {
@@ -851,7 +883,7 @@ export default function RezervasyonMatrisi({
 
       toast.success("Ders rezervasyonu oluşturuldu!", { duration: 4000 });
       setPendingSlot(null);
-      fetchBookedSlots();
+      refreshBookedSlots();
       onClose();
     } catch (err: unknown) {
       toast.error(

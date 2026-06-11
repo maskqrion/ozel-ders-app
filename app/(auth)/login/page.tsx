@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase/client";
-import { getErrorMessage } from "@/lib/utils/errorHandler";
 import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "@/app/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";

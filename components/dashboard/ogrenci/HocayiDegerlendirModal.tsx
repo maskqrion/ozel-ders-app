@@ -39,20 +39,22 @@ export default function HocayiDegerlendirModal({
   onClose,
   hocaId,
   hocaAdi,
-  ogrenciId,
   onSaved,
 }: Props) {
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
-  // Modal her açıldığında temizle
-  useEffect(() => {
+  // Modal her açıldığında render sırasında temizle
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setRating(5);
       setComment("");
     }
-  }, [open]);
+  }
 
   // ESC ile kapat
   useEffect(() => {

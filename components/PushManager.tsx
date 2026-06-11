@@ -42,7 +42,8 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return buf.buffer;
 }
 
-async function registerWebPush(userId: string): Promise<void> {
+// Not: kullanıcı kimliği sunucu tarafında oturum çerezinden çözülür; parametre gerekmez.
+async function registerWebPush(): Promise<void> {
   if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
     return;
   }
@@ -189,7 +190,7 @@ export default function PushManager() {
           const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (disposed) return;
             if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-              await registerWebPush(session.user.id);
+              await registerWebPush();
             } else if (event === "SIGNED_OUT") {
               await unregisterWebPush();
             }
@@ -198,7 +199,7 @@ export default function PushManager() {
 
           // Mevcut oturum varsa hemen kaydet
           const { data: { user } } = await supabase.auth.getUser();
-          if (!disposed && user) await registerWebPush(user.id);
+          if (!disposed && user) await registerWebPush();
         }
 
       } catch (err) {

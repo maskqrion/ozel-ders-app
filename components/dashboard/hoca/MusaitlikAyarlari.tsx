@@ -34,17 +34,30 @@ export default function MusaitlikAyarlari({ userId }: { userId: string }) {
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
+  // Saf sorgu: setState içermez — effect'in senkron yolunda güvenle durabilir.
+  const loadAvailability = useCallback(async (): Promise<AvailRow[]> => {
     const { data } = await supabase
       .from("teacher_availability")
       .select("id, day_of_week, start_hour, end_hour")
       .eq("hoca_id", userId);
-    setRows(data ?? []);
-    setLoading(false);
+    return data ?? [];
   }, [userId]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  // Handler'lar için: yenileme sırasında skeleton göster.
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    setRows(await loadAvailability());
+    setLoading(false);
+  }, [loadAvailability]);
+
+  // Mount'ta loading zaten true (initial state); setState'ler await sonrasında.
+  useEffect(() => {
+    (async () => {
+      const rows = await loadAvailability();
+      setRows(rows);
+      setLoading(false);
+    })();
+  }, [loadAvailability]);
 
   const rowFor = (dow: number) => rows.find((r) => r.day_of_week === dow);
 

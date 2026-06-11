@@ -189,11 +189,18 @@ export default function SonucPage({
   }, [router, quizId, attemptId]);
 
   /* ── XP count-up animation ── */
-  useEffect(() => {
+  // XP kazanılmadıysa rozeti render sırasında görünür yap
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  const [prevAttempt, setPrevAttempt] = useState<AttemptDetail | null | undefined>(undefined);
+  if (prevAttempt !== attempt) {
+    setPrevAttempt(attempt);
     if (!attempt || attempt.xp_earned === 0) {
       setXpVisible(true);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!attempt || attempt.xp_earned === 0) return;
     const target = attempt.xp_earned;
     const steps = 40;
     const stepMs = 20;
@@ -230,7 +237,6 @@ export default function SonucPage({
   if (!attempt) return null;
 
   const pct = attempt.total > 0 ? Math.round((attempt.score / attempt.total) * 100) : 0;
-  const xpEarned = attempt.xp_earned;
   const isPerfect = attempt.score === attempt.total;
   const isGood = pct >= 70;
   const passed = pct >= 60;

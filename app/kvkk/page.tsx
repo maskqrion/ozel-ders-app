@@ -23,8 +23,8 @@ export default function KvkkPage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">1. Veri Sorumlusu</h2>
             <p className="leading-relaxed">
-              Bu aydınlatma metni, <strong>Özel Ders Pro</strong> ("Platform") tarafından,
-              6698 sayılı Kişisel Verilerin Korunması Kanunu'nun ("KVKK") 10. maddesi uyarınca
+              Bu aydınlatma metni, <strong>Özel Ders Pro</strong> (&quot;Platform&quot;) tarafından,
+              6698 sayılı Kişisel Verilerin Korunması Kanunu&apos;nun (&quot;KVKK&quot;) 10. maddesi uyarınca
               hazırlanmıştır. Platform, veri sorumlusu sıfatıyla kişisel verilerinizi aşağıda
               açıklanan amaçlar ve yöntemlerle işlemektedir.
             </p>
@@ -38,7 +38,7 @@ export default function KvkkPage() {
               <li>Konum bilgisi: Şehir (opsiyonel, ödeme işlemleri için)</li>
               <li>Profil bilgileri: Fotoğraf, uzmanlık alanı, biyografi (opsiyonel)</li>
               <li>Eğitim bilgileri: Ders rezervasyonları, ödev ve quiz kayıtları</li>
-              <li>Finansal bilgiler: Cüzdan bakiyesi, işlem geçmişi (kart bilgileri Platform'da saklanmaz)</li>
+              <li>Finansal bilgiler: Cüzdan bakiyesi, işlem geçmişi (kart bilgileri Platform&apos;da saklanmaz)</li>
               <li>Teknik veriler: IP adresi, tarayıcı türü, oturum bilgileri</li>
             </ul>
           </section>
@@ -99,7 +99,7 @@ export default function KvkkPage() {
 
           <section>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">7. KVKK Kapsamındaki Haklarınız</h2>
-            <p className="mb-3 leading-relaxed">KVKK'nın 11. maddesi uyarınca aşağıdaki haklara sahipsiniz:</p>
+            <p className="mb-3 leading-relaxed">KVKK&apos;nın 11. maddesi uyarınca aşağıdaki haklara sahipsiniz:</p>
             <ul className="list-disc space-y-1.5 pl-5 leading-relaxed">
               <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
               <li>Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme</li>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { m } from "framer-motion";
 import toast from "react-hot-toast";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
@@ -40,6 +39,10 @@ export default function OgrenciPaneli() {
   const [siradakiDers, setSiradakiDers] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const lessonIdsRef = useRef<Set<string>>(new Set());
+
+  // React Compiler: dep dizilerinde optional chain (user?.id) memoizasyonu bozuyor;
+  // tek bir primitive değişkene çıkarıp her yerde onu kullanıyoruz.
+  const userId = user?.id;
 
   const fetchDersler = useCallback(async (ogrenciId: string) => {
     const { data } = await supabase
@@ -132,10 +135,10 @@ export default function OgrenciPaneli() {
   }, [dersler]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     const channel = supabase
-      .channel(`ogrenci-bildirimler-${user.id}`)
+      .channel(`ogrenci-bildirimler-${userId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "assignments" },
@@ -157,7 +160,7 @@ export default function OgrenciPaneli() {
               toast.success("✅ Bir ödeviniz puanlandı!");
             }
           }
-          fetchOdevler(user.id);
+          fetchOdevler(userId);
         },
       )
       .subscribe();
@@ -165,7 +168,7 @@ export default function OgrenciPaneli() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, fetchOdevler]);
+  }, [userId, fetchOdevler]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -174,7 +177,7 @@ export default function OgrenciPaneli() {
 
   const onAwardXp = useCallback(
     async (_amount: number, action: string) => {
-      if (!user?.id) return;
+      if (!userId) return;
       const actionKey = OGRENCI_XP_ACTION_MAP[action];
       if (!actionKey) return;
       const result = await awardHocaXp(actionKey);
@@ -206,11 +209,11 @@ export default function OgrenciPaneli() {
         return { ...prev, level: result.level, xp: result.xp };
       });
     },
-    [user?.id],
+    [userId],
   );
 
   const tabs: TabDef[] = useMemo(() => {
-    if (!user?.id) return [];
+    if (!userId) return [];
     return [
       {
         id: "ozet",
@@ -221,8 +224,8 @@ export default function OgrenciPaneli() {
             siradakiDers={siradakiDers}
             odevler={odevler}
             dersler={dersler}
-            refetchDersler={() => fetchDersler(user.id)}
-            refetchOdevler={() => fetchOdevler(user.id)}
+            refetchDersler={() => fetchDersler(userId)}
+            refetchOdevler={() => fetchOdevler(userId)}
           />
         ),
       },
@@ -244,13 +247,13 @@ export default function OgrenciPaneli() {
         id: "ogretmen-bul",
         label: "Öğretmen Bul",
         icon: "🔍",
-        content: <OgretmenBul currentUserId={user.id} />,
+        content: <OgretmenBul currentUserId={userId} />,
       },
       {
         id: "mesajlar",
         label: "Mesajlar",
         icon: "💬",
-        content: <Mesajlar userId={user.id} role="ogrenci" />,
+        content: <Mesajlar userId={userId} role="ogrenci" />,
       },
       {
         id: "kaynaklar",
@@ -262,10 +265,10 @@ export default function OgrenciPaneli() {
         id: "cuzdan",
         label: "Cüzdanım",
         icon: "💳",
-        content: <CuzdanOzet userId={user.id} />,
+        content: <CuzdanOzet userId={userId} />,
       },
     ];
-  }, [user?.id, siradakiDers, odevler, dersler, kaynaklar, fetchDersler, fetchOdevler, onAwardXp]);
+  }, [userId, siradakiDers, odevler, dersler, kaynaklar, fetchDersler, fetchOdevler, onAwardXp]);
 
   if (loading) {
     return (

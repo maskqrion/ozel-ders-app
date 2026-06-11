@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { m, AnimatePresence } from "framer-motion";
+import { m } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -108,7 +108,6 @@ export function Tabs({
 function FadeInDiv({
   tabs,
   active,
-  hovering,
   className,
 }: {
   tabs: Tab[];

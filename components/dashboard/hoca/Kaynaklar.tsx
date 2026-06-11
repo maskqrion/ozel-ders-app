@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import toast from "react-hot-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,9 +27,13 @@ export default function Kaynaklar({ kaynaklar: initialKaynaklar }: Props) {
   const [localKaynaklar, setLocalKaynaklar] = useState<Resource[]>(initialKaynaklar);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Prop değişince local state'i render sırasında senkronla
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  const [prevKaynaklar, setPrevKaynaklar] = useState(initialKaynaklar);
+  if (prevKaynaklar !== initialKaynaklar) {
+    setPrevKaynaklar(initialKaynaklar);
     setLocalKaynaklar(initialKaynaklar);
-  }, [initialKaynaklar]);
+  }
 
   const handleUpload = async () => {
     if (!file || !fileTitle) {

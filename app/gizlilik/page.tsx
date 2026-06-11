@@ -115,7 +115,7 @@ export default function GizlilikPage() {
               <Link href="/kvkk" className="text-blue-600 hover:underline">
                 KVKK Aydınlatma Metni
               </Link>
-              'ni inceleyebilirsiniz.
+              &apos;ni inceleyebilirsiniz.
             </p>
           </section>
 

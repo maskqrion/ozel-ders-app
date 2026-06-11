@@ -310,7 +310,7 @@ export default function ProfilSayfasi() {
                           Eğitmen Profili
                         </span>
                         <p className="text-xs text-slate-500">
-                          Bu bilgiler "Öğretmen Bul" arama sonuçlarında öğrencilere gösterilir.
+                          Bu bilgiler &quot;Öğretmen Bul&quot; arama sonuçlarında öğrencilere gösterilir.
                         </p>
                       </div>
 
@@ -352,7 +352,7 @@ export default function ProfilSayfasi() {
                             </span>
                           </div>
                           <p className="mt-1 text-[10px] text-slate-400">
-                            Boş bırakırsanız fiyat kartınızda "belirtilmemiş" olarak görünür.
+                            Boş bırakırsanız fiyat kartınızda &quot;belirtilmemiş&quot; olarak görünür.
                           </p>
                         </div>
                         <div className="md:col-span-2">

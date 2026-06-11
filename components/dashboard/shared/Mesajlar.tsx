@@ -125,7 +125,10 @@ export default function Mesajlar({ userId, role }: Props) {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
   const [contactSearch, setContactSearch] = useState("");
-  const [isContactOnline, setIsContactOnline] = useState(false);
+  // Presence snapshot'ı state'te tutulur (sync event callback'inde güncellenir);
+  // isContactOnline buradan türetilir — ayrı state + effect senkronizasyonu
+  // cascading render yaratıyordu.
+  const [presenceState, setPresenceState] = useState<Record<string, unknown>>({});
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const selectedContactRef = useRef<Contact | null>(null);
@@ -134,6 +137,8 @@ export default function Mesajlar({ userId, role }: Props) {
 
   useEffect(() => { selectedContactRef.current = selectedContact; }, [selectedContact]);
   useEffect(() => { contactsRef.current = contacts; }, [contacts]);
+
+  const isContactOnline = !!selectedContact && selectedContact.id in presenceState;
 
   /* ── 1) Kişileri ve okunmamış sayımları çek ── */
   useEffect(() => {
@@ -274,9 +279,8 @@ export default function Mesajlar({ userId, role }: Props) {
     presenceChannelRef.current = ch;
 
     ch.on("presence", { event: "sync" }, () => {
-      const state = ch.presenceState();
-      const active = selectedContactRef.current;
-      setIsContactOnline(active ? active.id in state : false);
+      // Yeni obje kimliğiyle kopyala ki türetilmiş isContactOnline tazelensin
+      setPresenceState({ ...ch.presenceState() });
     }).subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         await ch.track({ user_id: userId, online_at: new Date().toISOString() });
@@ -288,15 +292,6 @@ export default function Mesajlar({ userId, role }: Props) {
       presenceChannelRef.current = null;
     };
   }, [userId]);
-
-  /* ── 3c) Update online status when selected contact changes ── */
-  useEffect(() => {
-    if (!selectedContact) { setIsContactOnline(false); return; }
-    const ch = presenceChannelRef.current;
-    if (!ch) return;
-    const state = ch.presenceState();
-    setIsContactOnline(selectedContact.id in state);
-  }, [selectedContact]);
 
   /* ── 4) Auto-scroll to bottom ── */
   useEffect(() => {

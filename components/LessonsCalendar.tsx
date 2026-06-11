@@ -39,7 +39,7 @@ export default function LessonsCalendar({ dersler, accent, value, onChange }: Pr
       <Calendar
         locale="tr-TR"
         value={value}
-        onChange={(v: any) => onChange(v instanceof Date ? v : null)}
+        onChange={(v: unknown) => onChange(v instanceof Date ? v : null)}
         prev2Label={null}
         next2Label={null}
         tileContent={({ date, view }) => {

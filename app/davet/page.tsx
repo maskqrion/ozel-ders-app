@@ -12,15 +12,24 @@ function DavetIcerik() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
 
-  const [status, setStatus]           = useState<Status>("loading");
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [status, setStatus]           = useState<Status>(() => (token ? "loading" : "invalid"));
+  const [errorMessage, setErrorMessage] = useState<string>(() =>
+    token ? "" : "Geçersiz davet bağlantısı.",
+  );
 
-  useEffect(() => {
+  // Token sonradan boşalırsa durumu render sırasında güncelle
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  const [prevToken, setPrevToken] = useState(token);
+  if (prevToken !== token) {
+    setPrevToken(token);
     if (!token) {
       setErrorMessage("Geçersiz davet bağlantısı.");
       setStatus("invalid");
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!token) return;
 
     validateInvitation(token).then((result) => {
       if (!result.ok) {

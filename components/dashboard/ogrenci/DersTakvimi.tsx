@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { AnimatePresence, m } from "framer-motion";
@@ -23,6 +23,15 @@ export default function DersTakvimi() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [videoLessonId, setVideoLessonId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // "Derse katıl" penceresi için dakikada bir tazelenen saat.
+  // Render içinde Date.now() çağrısı React kurallarına aykırıydı (impure);
+  // buton durumu artık re-render beklemeden dakikada bir güncellenir.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleCancel = async (lessonId: string) => {
     if (!confirm("Bu dersi iptal etmek istediğinizden emin misiniz?")) return;
@@ -82,7 +91,6 @@ export default function DersTakvimi() {
             {seciliGunDersleri.map((d) => {
               const status    = d.status as string;
               const isVideo   = videoLessonId === d.id;
-              const now       = Date.now();
               const start     = new Date(d.lesson_date).getTime();
               const canJoin   = now >= start - 15 * 60 * 1000 && now <= start + 90 * 60 * 1000;
               return (

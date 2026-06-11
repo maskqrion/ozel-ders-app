@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { AnimatePresence, m } from "framer-motion";
@@ -34,6 +34,15 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
   const [pendingLessonId, setPendingLessonId] = useState<string | null>(null);
   const [videoLessonId, setVideoLessonId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  // "Derse katıl" penceresi için dakikada bir tazelenen saat.
+  // Render içinde Date.now() çağrısı React kurallarına aykırıydı (impure);
+  // buton durumu artık re-render beklemeden dakikada bir güncellenir.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const seciliGunDersleri = useMemo(() => {
     if (!selectedDate) return [];
@@ -156,7 +165,6 @@ export default function DersTakvimi({ ogrenciler, onAwardXp }: Props) {
               )}
               {seciliGunDersleri.map((d) => {
                 const isVideo = videoLessonId === d.id;
-                const now     = Date.now();
                 const start   = new Date(d.lesson_date).getTime();
                 const canJoin = now >= start - 15 * 60 * 1000 && now <= start + 90 * 60 * 1000;
                 return (

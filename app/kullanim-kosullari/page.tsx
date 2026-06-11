@@ -24,8 +24,8 @@ export default function KullanimKosullariPage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">1. Kabul</h2>
             <p className="leading-relaxed">
-              Özel Ders Pro platformuna ("Platform") erişerek veya platform üzerinden hizmet
-              kullanarak bu Kullanım Koşulları'nı ("Koşullar") kabul etmiş sayılırsınız.
+              Özel Ders Pro platformuna (&quot;Platform&quot;) erişerek veya platform üzerinden hizmet
+              kullanarak bu Kullanım Koşulları&apos;nı (&quot;Koşullar&quot;) kabul etmiş sayılırsınız.
               Koşulları kabul etmiyorsanız platformu kullanmayınız.
             </p>
           </section>
@@ -94,7 +94,7 @@ export default function KullanimKosullariPage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">8. Fikri Mülkiyet</h2>
             <p className="leading-relaxed">
-              Platform adı, logosu, tasarımı ve yazılımı Özel Ders Pro'ya aittir. Öğretmenlerin
+              Platform adı, logosu, tasarımı ve yazılımı Özel Ders Pro&apos;ya aittir. Öğretmenlerin
               yüklediği ders materyalleri, hazırladığı quizler ve diğer içerikler ilgili
               öğretmene aittir; Platform bu içerikleri hizmet sunumu amacıyla kullanma hakkına
               sahiptir.
@@ -104,7 +104,7 @@ export default function KullanimKosullariPage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold text-slate-900">9. Hesap Askıya Alma ve Kapatma</h2>
             <p className="leading-relaxed">
-              Platform, bu Koşullar'ı ihlal eden hesapları önceden bildirim yapmaksızın askıya
+              Platform, bu Koşullar&apos;ı ihlal eden hesapları önceden bildirim yapmaksızın askıya
               alabilir veya kalıcı olarak kapatabilir. Ağır ihlallerde (dolandırıcılık, taciz
               vb.) yasal işlem başlatılabilir.
             </p>
@@ -139,7 +139,7 @@ export default function KullanimKosullariPage() {
               <Link href="/kvkk" className="text-blue-600 hover:underline">
                 KVKK Aydınlatma Metni
               </Link>
-              'ni inceleyin.
+              &apos;ni inceleyin.
             </p>
           </section>
         </div>

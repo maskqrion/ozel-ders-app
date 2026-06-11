@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { m, AnimatePresence } from "framer-motion";
 import { Search, X, ChevronDown, Check, SlidersHorizontal, Heart } from "lucide-react";
-import { Budget, SortId, SubjectId, BUDGETS, SORTS, SUBJECTS } from "./teacher.types";
+import { SortId, SubjectId, BUDGETS, SORTS, SUBJECTS } from "./teacher.types";
 
 function BudgetDropdown({
   value,

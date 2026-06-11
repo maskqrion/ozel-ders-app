@@ -7,7 +7,8 @@ export function useTeacherSearch(currentUserId: string) {
   const [sehir, setSehir] = useState("");
   const [ilce] = useState("");
   const [hocalar, setHocalar] = useState<Hoca[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Mount'taki ilk arama hemen başladığı için loading true başlar.
+  const [loading, setLoading] = useState(true);
   const [searched, setSearched] = useState(false);
 
   const [ratings, setRatings] = useState<Map<string, RatingStat>>(new Map());
@@ -62,39 +63,66 @@ export function useTeacherSearch(currentUserId: string) {
     [currentUserId]
   );
 
+  // Saf sorgu: setState içermez — effect'in senkron yolunda güvenle durabilir.
+  // null dönerse sorgu hatası var demektir.
+  const searchHocalar = useCallback(
+    async (sehirQ: string, ilceQ: string): Promise<Hoca[] | null> => {
+      let q = supabase.from("users").select(HOCA_SELECT).eq("role", "hoca");
+      if (sehirQ.trim()) q = q.ilike("sehir", `%${sehirQ.trim()}%`);
+      if (ilceQ.trim()) q = q.ilike("ilce", `%${ilceQ.trim()}%`);
+      const { data, error } = await q
+        .order("level", { ascending: false })
+        .order("xp", { ascending: false })
+        .limit(60);
+
+      if (error) return null;
+      return (data as Hoca[]) ?? [];
+    },
+    []
+  );
+
+  // Sorgu sonucunu state'e uygula (await sonrasında çağrılır).
+  const applySearchResult = useCallback(
+    async (list: Hoca[] | null) => {
+      if (list === null) {
+        toast.error("Hocalar yüklenemedi. Lütfen tekrar deneyin.");
+        setHocalar([]);
+        setRatings(new Map());
+        setReviewedHocaIds(new Set());
+        return;
+      }
+      setHocalar(list);
+      await fetchRatings(list.map((h) => h.id));
+    },
+    [fetchRatings]
+  );
+
+  // Handler'lar için: arama sırasında skeleton göster.
   const fetchHocalar = useCallback(
     async (sehirQ: string, ilceQ: string) => {
       setLoading(true);
       try {
-        let q = supabase.from("users").select(HOCA_SELECT).eq("role", "hoca");
-        if (sehirQ.trim()) q = q.ilike("sehir", `%${sehirQ.trim()}%`);
-        if (ilceQ.trim()) q = q.ilike("ilce", `%${ilceQ.trim()}%`);
-        const { data, error } = await q
-          .order("level", { ascending: false })
-          .order("xp", { ascending: false })
-          .limit(60);
-
-        if (error) {
-          toast.error("Hocalar yüklenemedi. Lütfen tekrar deneyin.");
-          setHocalar([]);
-          setRatings(new Map());
-          setReviewedHocaIds(new Set());
-          return;
-        }
-        const list = (data as Hoca[]) ?? [];
-        setHocalar(list);
-        await fetchRatings(list.map((h) => h.id));
+        await applySearchResult(await searchHocalar(sehirQ, ilceQ));
       } finally {
         setLoading(false);
         setSearched(true);
       }
     },
-    [fetchRatings]
+    [searchHocalar, applySearchResult]
   );
 
+  // Mount'ta loading zaten true (initial state); setState'ler await sonrasında.
   useEffect(() => {
-    fetchHocalar("", "");
-  }, [fetchHocalar]);
+    (async () => {
+      try {
+        const list = await searchHocalar("", "");
+        await applySearchResult(list);
+      } finally {
+        setLoading(false);
+        setSearched(true);
+      }
+    })();
+  }, [searchHocalar, applySearchResult]);
 
   const onSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

@@ -221,11 +221,19 @@ export default function LiderlikTablosu() {
     });
   }, []);
 
+  // Filtre değişince loading/error'u render sırasında resetle
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  // İlk mount'ta loading=true, error=null zaten initial state.
+  const [prevFilter, setPrevFilter] = useState(filter);
+  if (prevFilter !== filter) {
+    setPrevFilter(filter);
+    setLoading(true);
+    setError(null);
+  }
+
   // Fetch leaderboard whenever filter changes
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     (async () => {
       try {
@@ -277,7 +285,7 @@ export default function LiderlikTablosu() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-black tracking-tight text-white">Liderlik Tablosu</h2>
-            <p className="mt-0.5 text-xs text-white/35">En yüksek XP'ye sahip kullanıcılar</p>
+            <p className="mt-0.5 text-xs text-white/35">En yüksek XP&apos;ye sahip kullanıcılar</p>
           </div>
 
           {/* Filter tabs */}

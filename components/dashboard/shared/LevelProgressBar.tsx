@@ -87,7 +87,7 @@ export default function LevelProgressBar({
           </div>
         </div>
         <div className={`text-right text-xs font-medium ${colors.label}`}>
-          <p>Lv {safeLevel + 1}'e</p>
+          <p>Lv {safeLevel + 1}&apos;e</p>
           <p className="text-base font-bold">{remaining.toLocaleString("tr-TR")} XP</p>
         </div>
       </div>

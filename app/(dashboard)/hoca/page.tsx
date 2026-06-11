@@ -55,6 +55,10 @@ export default function HocaPaneli() {
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const [createdSuggestions,   setCreatedSuggestions]   = useState<Set<string>>(new Set());
 
+  // React Compiler: dep dizilerinde optional chain (user?.id) memoizasyonu bozuyor;
+  // tek bir primitive değişkene çıkarıp her yerde onu kullanıyoruz.
+  const userId = user?.id;
+
   const derslerRef = useRef<Lesson[]>([]);
   useEffect(() => { derslerRef.current = dersler; }, [dersler]);
 
@@ -148,9 +152,9 @@ export default function HocaPaneli() {
   }, [router, fetchDersler, fetchOdevler, fetchKaynaklar, queryClient]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
     const channel = supabase
-      .channel(`hoca-bildirimler-${user.id}`)
+      .channel(`hoca-bildirimler-${userId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "assignments" }, (payload) => {
         const hocaLessonIds = new Set(derslerRef.current.map(d => d.id));
         if (
@@ -159,12 +163,12 @@ export default function HocaPaneli() {
           hocaLessonIds.has(payload.new.lesson_id)
         ) {
           toast.success("✅ Bir öğrenci ödevini teslim etti!", { duration: 4000 });
-          fetchOdevler(user.id);
+          fetchOdevler(userId);
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, fetchOdevler]);
+  }, [userId, fetchOdevler]);
 
   const gosterilecekDersler = useMemo(() =>
     filtreOgrenci ? dersler.filter(d => d.ogrenci_id === filtreOgrenci) : dersler,
@@ -176,30 +180,31 @@ export default function HocaPaneli() {
     [odevler, filtreOgrenci],
   );
 
-  const yapildiSayilari = useMemo(() => {
-    const map = new Map<string, number>();
+  const quizSuggestion = useMemo(() => {
+    // Öğrenci başına "yapildi" ödev sayıları (Map lokal — dep olarak geçirmek
+    // React Compiler memoizasyonunu bozuyordu). Döngü içinden erken return da
+    // memoizasyonu bozduğu için tek çıkış noktası kullanılıyor.
+    const yapildiSayilari = new Map<string, number>();
     for (const o of odevler) {
       if (o.status === "yapildi" && o.lessons?.ogrenci_id) {
-        map.set(o.lessons.ogrenci_id, (map.get(o.lessons.ogrenci_id) ?? 0) + 1);
+        yapildiSayilari.set(o.lessons.ogrenci_id, (yapildiSayilari.get(o.lessons.ogrenci_id) ?? 0) + 1);
       }
     }
-    return map;
-  }, [odevler]);
-
-  const quizSuggestion = useMemo(() => {
-    for (const [ogrenciId, count] of yapildiSayilari.entries()) {
+    let suggestion: { ogrenci: UserProfile; count: number; key: string } | null = null;
+    for (const [ogrenciId, count] of yapildiSayilari) {
       if (count <= 0 || count % 4 !== 0) continue;
       const key = `${ogrenciId}-${count}`;
       if (dismissedSuggestions.has(key) || createdSuggestions.has(key)) continue;
       const ogrenci = ogrenciler.find(o => o.id === ogrenciId);
       if (!ogrenci) continue;
-      return { ogrenci, count, key };
+      suggestion = { ogrenci, count, key };
+      break;
     }
-    return null;
-  }, [yapildiSayilari, ogrenciler, dismissedSuggestions, createdSuggestions]);
+    return suggestion;
+  }, [odevler, ogrenciler, dismissedSuggestions, createdSuggestions]);
 
   const onAwardXp = useCallback(async (_amount: number, action: string) => {
-    if (!user?.id) return;
+    if (!userId) return;
     const actionKey = XP_ACTION_MAP[action];
     if (!actionKey) return;
     const result = await awardHocaXp(actionKey);
@@ -218,7 +223,7 @@ export default function HocaPaneli() {
       }
       return { ...prev, level: result.level, xp: result.xp };
     });
-  }, [user?.id]);
+  }, [userId]);
 
   const onQuizSaved = useCallback(async (_quizId: string) => {
     toast.success("🧠 Quiz hazır! Hayırlı olsun.", { duration: 3500 });
@@ -229,13 +234,13 @@ export default function HocaPaneli() {
   }, [onAwardXp, quizSuggestion]);
 
   const contentMap = useMemo(() => {
-    if (!user?.id) return {} as Record<string, React.ReactNode>;
+    if (!userId) return {} as Record<string, React.ReactNode>;
     return {
       ozet: (
         <GenelOzet
           ogrenciler={ogrenciler}
           odevler={gosterilecekOdevler}
-          hocaId={user.id}
+          hocaId={userId}
         />
       ),
       takvim: (
@@ -244,13 +249,13 @@ export default function HocaPaneli() {
       odevler: (
         <OdevYonetimi dersler={gosterilecekDersler} onAwardXp={onAwardXp} />
       ),
-      mesajlar: <Mesajlar userId={user.id} role="hoca" />,
-      degerlendirmeler: <OgrenciDegerlendirmeleri hocaId={user.id} />,
+      mesajlar: <Mesajlar userId={userId} role="hoca" />,
+      degerlendirmeler: <OgrenciDegerlendirmeleri hocaId={userId} />,
       kaynaklar: <Kaynaklar kaynaklar={kaynaklar} />,
-      cuzdan: <HocaCuzdani userId={user.id} />,
-      musaitlik: <MusaitlikAyarlari userId={user.id} />,
+      cuzdan: <HocaCuzdani userId={userId} />,
+      musaitlik: <MusaitlikAyarlari userId={userId} />,
     } as Record<string, React.ReactNode>;
-  }, [user?.id, ogrenciler, gosterilecekDersler, gosterilecekOdevler, kaynaklar, onAwardXp]);
+  }, [userId, ogrenciler, gosterilecekDersler, gosterilecekOdevler, kaynaklar, onAwardXp]);
 
   if (loading) {
     return (

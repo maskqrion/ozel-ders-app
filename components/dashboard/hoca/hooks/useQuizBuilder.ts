@@ -9,15 +9,18 @@ export function useQuizBuilder({ open, onClose, defaultTitle, onSaved }: QuizOlu
   const [questions, setQuestions] = useState<DraftQuestion[]>(() => [newQuestion()]);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  // Modal açılırken formu render sırasında sıfırla
+  // (effect içinde senkron setState cascading render yaratıyordu).
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setTitle(defaultTitle ?? "");
       setDescription("");
       setQuestions([newQuestion()]);
       setSaving(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -84,8 +87,12 @@ export function useQuizBuilder({ open, onClose, defaultTitle, onSaved }: QuizOlu
       if (error) throw error;
       await onSaved(data as string);
       onClose();
-    } catch (err: any) {
-      toast.error("Quiz kaydedilemedi: " + (err?.message ?? "Bilinmeyen hata"));
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : null;
+      toast.error("Quiz kaydedilemedi: " + (message ?? "Bilinmeyen hata"));
     } finally {
       setSaving(false);
     }

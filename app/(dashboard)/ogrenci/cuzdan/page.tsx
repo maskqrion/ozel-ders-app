@@ -264,28 +264,33 @@ export default function CuzdanPage() {
 
   useEffect(() => {
     if (!userId) return;
-    if (callbackSuccess === "1") {
-      toast.success("Ödeme başarılı! Bakiyeniz güncellendi.", { icon: "🔒" });
-      fetchData(userId);
-    } else if (callbackError) {
-      const msgs: Record<string, string> = {
-        "3ds_failed":          "3D Secure doğrulaması başarısız.",
-        "payment_failed":      "Ödeme tamamlanamadı. Lütfen tekrar deneyin.",
-        "deposit_failed":      "Bakiye güncellenemedi. Destek ekibiyle iletişime geçin.",
-        "intent_not_found":    "Ödeme oturumu bulunamadı. Lütfen tekrar deneyin.",
-        "unexpected":          "Beklenmeyen bir hata oluştu.",
-        "callback_parse":      "Ödeme yanıtı işlenemedi. Lütfen tekrar deneyin.",
-        "missing_conversation": "Ödeme oturumu eksik. Lütfen tekrar başlatın.",
-        "already_processed":   "Bu ödeme zaten işlendi.",
-      };
-      const msg = msgs[callbackError] ?? "Ödeme başarısız oldu.";
-      if (callbackError === "already_processed") {
-        toast(msg, { icon: "ℹ️" });
-        fetchData(userId);
-      } else {
-        toast.error(msg);
+    // fetchData async sarmalayıcı içinde await ile çağrılır; senkron çağrı
+    // react-hooks/set-state-in-effect tarafından işaretleniyordu. Akış birebir aynı.
+    const run = async () => {
+      if (callbackSuccess === "1") {
+        toast.success("Ödeme başarılı! Bakiyeniz güncellendi.", { icon: "🔒" });
+        await fetchData(userId);
+      } else if (callbackError) {
+        const msgs: Record<string, string> = {
+          "3ds_failed":          "3D Secure doğrulaması başarısız.",
+          "payment_failed":      "Ödeme tamamlanamadı. Lütfen tekrar deneyin.",
+          "deposit_failed":      "Bakiye güncellenemedi. Destek ekibiyle iletişime geçin.",
+          "intent_not_found":    "Ödeme oturumu bulunamadı. Lütfen tekrar deneyin.",
+          "unexpected":          "Beklenmeyen bir hata oluştu.",
+          "callback_parse":      "Ödeme yanıtı işlenemedi. Lütfen tekrar deneyin.",
+          "missing_conversation": "Ödeme oturumu eksik. Lütfen tekrar başlatın.",
+          "already_processed":   "Bu ödeme zaten işlendi.",
+        };
+        const msg = msgs[callbackError] ?? "Ödeme başarısız oldu.";
+        if (callbackError === "already_processed") {
+          toast(msg, { icon: "ℹ️" });
+          await fetchData(userId);
+        } else {
+          toast.error(msg);
+        }
       }
-    }
+    };
+    run();
   }, [userId, fetchData, callbackSuccess, callbackError]);
 
   /* ── Simüle deposit ── */

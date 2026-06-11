@@ -113,7 +113,7 @@ export default function OgrenciDegerlendirmeleri({ hocaId }: Props) {
           </div>
           <p className="text-sm font-medium text-slate-700">Henüz bir değerlendirme almadınız</p>
           <p className="text-xs text-slate-500">
-            Öğrencileriniz "Öğretmen Bul" üzerinden sizi değerlendirdikçe yorumları burada görebileceksiniz.
+            Öğrencileriniz &quot;Öğretmen Bul&quot; üzerinden sizi değerlendirdikçe yorumları burada görebileceksiniz.
           </p>
         </div>
       ) : (
