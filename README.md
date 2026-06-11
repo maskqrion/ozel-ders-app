@@ -32,17 +32,30 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Testler
 
-E2E smoke testleri `tests/e2e/` altındadır ve Playwright ile çalışır. Kapsam:
+E2E testleri `tests/e2e/` altındadır ve Playwright ile çalışır. İki katman vardır:
+
+**1. Smoke (oturumsuz)** — `tests/e2e/smoke.spec.ts`, her zaman çalışır:
 
 - Açılış sayfası yükleniyor (`/`)
 - Giriş sayfası yükleniyor (`/login`)
 - Korumalı dashboard, oturumu olmayan kullanıcıyı `/login`'e yönlendiriyor
 - Herkese açık eğitmen profili (`/hoca/[id]`) login'e yönlendirmeden yanıt veriyor
 
+**2. Kimlik doğrulamalı** — `tests/e2e/authenticated.spec.ts`, yalnızca
+`E2E_STUDENT_EMAIL` / `E2E_STUDENT_PASSWORD` ve/veya `E2E_TEACHER_EMAIL` /
+`E2E_TEACHER_PASSWORD` ortam değişkenleri tanımlıysa çalışır; yoksa **otomatik
+atlanır** ve `npm run test` yine geçer. Kapsam: öğrenci/hoca girişi, dashboard,
+öğretmen arama, rezervasyon modali (onaysız), cüzdan (ödemesiz), mesajlar
+(göndermeden). Testler salt okunurdur — gerçek rezervasyon, ödeme, mesaj veya
+AI çağrısı **yapmaz**.
+
 İlk kurulumda tarayıcıyı indirin: `npx playwright install chromium`
 
-Testler gerçek kullanıcı kimlik bilgisi, ödeme veya ücretli AI çağrısı **kullanmaz**;
-yalnızca oturumsuz sayfa yüklemeleri yapılır.
+Kurulum ayrıntıları, güvenlik kuralları ve staging/test Supabase önerisi için:
+[`docs/e2e-testing.md`](docs/e2e-testing.md). **Asla production kullanıcı
+bilgisi kullanmayın** — yalnızca test hesapları.
+
+Sürüm öncesi elle doğrulama: [`docs/manual-regression-checklist.md`](docs/manual-regression-checklist.md)
 
 **TODO (sonraki fazlar):** Vitest + React Testing Library ile birim/bileşen testleri;
 kritik akışlar (rezervasyon, cüzdan, quiz) için mock'lanmış entegrasyon testleri.
